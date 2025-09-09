@@ -12,18 +12,18 @@ import {IVault} from "@balancer-labs/v2-interfaces/contracts/vault/IVault.sol";
 // Local Test Utilities
 import {
     VaultDeployer, IMinimumAuthorizer
-} from "../contracts/test-utils/deployers/VaultDeployer.sol";
+} from "./helpers/deployers/VaultDeployer.sol";
 import {WeightedPoolFactoryDeployer} from
-    "../contracts/test-utils/deployers/WeightedPoolFactoryDeployer.sol";
+    "./helpers/deployers/WeightedPoolFactoryDeployer.sol";
 import {BalancerV2HelperDeployer} from
-    "../contracts/test-utils/deployers/BalancerV2HelperDeployer.sol";
-import {IBalancerV2Helper} from "../contracts/test-utils/interfaces/IBalancerV2Helper.sol";
-import {IVaultPool} from "../contracts/interfaces/IVaultPool.sol";
-import {IMockSMP} from "../contracts/test-utils/interfaces/IMockSMP.sol";
-import {IWeightedPoolFactory} from "../contracts/test-utils/interfaces/IWeightedPoolFactory.sol";
-import {IWOAS} from "../contracts/interfaces/IWOAS.sol";
-import {MockSMP} from "../contracts/test-utils/MockSMPv7.sol";
-import {BalancerV2Helper} from "../contracts/test-utils/BalancerV2Helper.sol";
+    "./helpers/deployers/BalancerV2HelperDeployer.sol";
+import {IBalancerV2Helper} from "./helpers/interfaces/IBalancerV2Helper.sol";
+import {IVaultPool} from "../src/interfaces/IVaultPool.sol";
+import {IMockSMP} from "./helpers/interfaces/IMockSMP.sol";
+import {IWeightedPoolFactory} from "./helpers/interfaces/IWeightedPoolFactory.sol";
+import {IWOAS} from "../src/interfaces/IWOAS.sol";
+import {MockSMP} from "./mocks/MockSMPv7.sol";
+import {BalancerV2Helper} from "./helpers/BalancerV2Helper.sol";
 
 contract BalancerV2HelperTest is Test {
     IBalancerV2Helper public helper;

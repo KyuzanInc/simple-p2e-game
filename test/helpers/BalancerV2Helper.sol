@@ -19,8 +19,8 @@ import {MockRateProvider} from "@balancer-labs/v2-pool-utils/contracts/test/Mock
 import {IBalancerV2Helper} from "./interfaces/IBalancerV2Helper.sol";
 import {IMockSMP} from "./interfaces/IMockSMP.sol";
 import {IWeightedPoolFactory} from "./interfaces/IWeightedPoolFactory.sol";
-import {IVaultPool} from "../interfaces/IVaultPool.sol";
-import {IWOAS} from "../interfaces/IWOAS.sol";
+import {IVaultPool} from "../../src/interfaces/IVaultPool.sol";
+import {IWOAS} from "../../src/interfaces/IWOAS.sol";
 
 /**
  * @title BalancerV2Helper

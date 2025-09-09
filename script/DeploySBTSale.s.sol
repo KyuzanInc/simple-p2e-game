@@ -4,7 +4,7 @@ pragma solidity >=0.8.0;
 import {Script, console} from "forge-std/Script.sol";
 import {TransparentUpgradeableProxy} from
     "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
-import {SBTSale} from "../contracts/SBTSale.sol";
+import {SBTSale} from "../src/SBTSale.sol";
 
 /**
  * @title DeploySBTSale

@@ -4,7 +4,7 @@ pragma solidity >=0.8.0;
 import {Script, console} from "forge-std/Script.sol";
 import {TransparentUpgradeableProxy} from
     "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
-import {SoulboundToken} from "../contracts/SoulboundToken.sol";
+import {SoulboundToken} from "../src/SoulboundToken.sol";
 
 /**
  * @title DeploySoulboundToken

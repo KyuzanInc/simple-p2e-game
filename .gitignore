@@ -24,3 +24,6 @@ docs/
 
 # Local files
 .local/
+
+# Claude settings
+.claude/

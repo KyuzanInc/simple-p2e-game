@@ -5,7 +5,7 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {ERC20Burnable} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 
 import {MockPOAS} from "./MockPOAS.sol";
-import {IPOASMinter} from "../interfaces/IPOASMinter.sol";
+import {IPOASMinter} from "../../src/interfaces/IPOASMinter.sol";
 
 /**
  * @title MockPOASMinter - Mock version of the pOAS minter contract for testing purposes
