@@ -6,9 +6,6 @@ node_modules/
 # Ignores development broadcast logs
 /broadcast
 
-# Docs
-docs/
-
 # Dotenv file
 .env
 
