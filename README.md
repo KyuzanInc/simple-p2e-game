@@ -1,10 +1,12 @@
 # simple-p2e-game
+
 A Play-to-Earn (P2E) project where players earn SMP (Simple) Tokens—a cryptocurrency—by playing a simple game that uses Cards, which are Soulbound Tokens (SBTs) with expiration dates.
 
 ## Getting Started
-- For DApp developers: Navigate to the [hardhat](./hardhat) directory, which contains bindings for a TypeScript-based DApp.
+
 - For smart contract developers: Work from the root directory. Follow the instructions below.
   - Note: This project uses [Foundry](https://getfoundry.sh/). Please make sure Foundry is installed beforehand.
+
 ```sh
 # Install dependencies
 npm install
@@ -17,6 +19,7 @@ npm test
 ```
 
 ## Contracts
+
 - SimpleGame
   - The main contract that users interact with to play the game. (Not yet implemented.)
 - [SBTSale](./contracts/SBTSale.sol)
@@ -31,6 +34,8 @@ npm test
   - Deployed using the [L1StandardERC20Factory](https://docs.oasys.games/docs/architecture/hub-layer/contract#preset-contracts).
 
 ## Gaming Dex
+
 A DEX built on the Oasys Hub, used for swapping SMP tokens. Gaming DEX is a fork of [Balancer V2](https://github.com/balancer/balancer-v2-monorepo).
+
 - [testnet](https://testnet.gaming-dex.com/#/oasys-testnet/swap)
 - [mainnet](https://www.gaming-dex.com/#/defiverse/swap)
