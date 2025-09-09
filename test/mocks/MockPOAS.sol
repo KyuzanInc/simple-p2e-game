@@ -6,7 +6,7 @@ import {ERC20Burnable} from "@openzeppelin/contracts/token/ERC20/extensions/ERC2
 
 /**
  * @title MockPOAS - Mock version of the pOAS token for testing purposes
- * @dev https://github.com/oasysgames/p-oas-contract/blob/v1.0.4/src/POAS.sol
+ * @dev https://github.com/oasysgames/p-oas-contract/blob/v1.0src/POAS.sol
  */
 contract MockPOAS is ERC20Burnable {
     event Paid(address indexed from, address indexed recipient, uint256 amount);

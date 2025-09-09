@@ -9,6 +9,9 @@ import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {ReentrancyGuardUpgradeable} from
     "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+import {EIP712Upgradeable} from "@openzeppelin/contracts-upgradeable/utils/cryptography/EIP712Upgradeable.sol";
+import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
+import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 
 // BalancerV2
 import {IVault} from "@balancer-labs/v2-interfaces/contracts/vault/IVault.sol";
@@ -30,8 +33,9 @@ import {IPOASMinter} from "./interfaces/IPOASMinter.sol";
  * @dev Contract for selling SBTs using multiple payment tokens. Handles SMP burning,
  *      liquidity provision and revenue distribution.
  */
-contract SBTSale is ISBTSale, OwnableUpgradeable, ReentrancyGuardUpgradeable {
+contract SBTSale is ISBTSale, OwnableUpgradeable, ReentrancyGuardUpgradeable, EIP712Upgradeable {
     using SafeERC20 for IERC20;
+    using SignatureChecker for address;
 
     /// @dev Data structure for swap operation
     struct SwapData {
@@ -42,11 +46,30 @@ contract SBTSale is ISBTSale, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         address recipient; // Address to receive the swapped tokens
     }
 
+    /// @dev Data structure to avoid stack too deep errors
+    struct PurchaseData {
+        uint256 requiredSMP;
+        uint256 burnSMP;
+        uint256 liquiditySMP;
+        uint256 revenueSMP;
+        uint256 revenueOAS;
+        uint256 actualAmount;
+        uint256 refundAmount;
+    }
+
     // Native OAS and WOAS addresses
     address private constant NATIVE_OAS = address(0);
 
     // Basis points for ratio calculations (10000 = 100%)
     uint256 public constant MAX_BASIS_POINTS = 10_000;
+    
+    // Maximum batch size for array operations
+    uint256 public constant MAX_BATCH_SIZE = 200;
+
+    // EIP-712 constants
+    bytes32 private constant PURCHASE_ORDER_TYPEHASH = keccak256(
+        "PurchaseOrder(uint256 purchaseId,address buyer,uint256[] tokenIds,address paymentToken,uint256 amount,uint256 maxSlippageBps,uint256 deadline)"
+    );
 
     // Immutable configuration
     address private immutable _vault;
@@ -59,6 +82,13 @@ contract SBTSale is ISBTSale, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     uint256 private immutable _smpBasePrice;
     uint256 private immutable _smpBurnRatio;
     uint256 private immutable _smpLiquidityRatio;
+
+    // Signature verification state
+    address private _signer;
+    mapping(uint256 => bool) public usedPurchaseIds;
+
+    // SBT contract configuration
+    ISBTSaleERC721 private _sbtContract;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(
@@ -119,10 +149,11 @@ contract SBTSale is ISBTSale, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     function initialize(address initialOwner) public initializer {
         __Ownable_init(initialOwner);
         __ReentrancyGuard_init();
+        __EIP712_init("SBTSale", "1");
     }
 
     /// @inheritdoc ISBTSale
-    function getWOAS() external view returns (address poas) {
+    function getWOAS() external view returns (address woas) {
         return _woas;
     }
 
@@ -167,9 +198,84 @@ contract SBTSale is ISBTSale, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     }
 
     /// @inheritdoc ISBTSale
+    function setSigner(address newSigner) external onlyOwner {
+        if (newSigner == address(0)) {
+            revert InvalidSigner();
+        }
+        address oldSigner = _signer;
+        _signer = newSigner;
+        emit SignerUpdated(oldSigner, newSigner);
+    }
+
+    /// @inheritdoc ISBTSale
+    function getSigner() external view returns (address) {
+        return _signer;
+    }
+
+    /// @inheritdoc ISBTSale
+    function isUsedPurchaseId(uint256 purchaseId) external view returns (bool) {
+        return usedPurchaseIds[purchaseId];
+    }
+
+    /// @inheritdoc ISBTSale
+    function setSBTContract(ISBTSaleERC721 newSBTContract) external onlyOwner {
+        if (address(newSBTContract) == address(0)) {
+            revert InvalidAddress();
+        }
+        
+        // Verify contract implements required interface using ERC-165
+        // Check for ERC721 interface support (0x80ac58cd) which ISBTSaleERC721 extends
+        try IERC165(address(newSBTContract)).supportsInterface(0x80ac58cd) returns (bool supportsERC721) {
+            if (!supportsERC721) {
+                revert InvalidAddress();
+            }
+        } catch {
+            revert InvalidAddress();
+        }
+        
+        ISBTSaleERC721 oldContract = _sbtContract;
+        _sbtContract = newSBTContract;
+        emit SBTContractUpdated(address(oldContract), address(newSBTContract));
+    }
+
+    /// @inheritdoc ISBTSale
+    function getSBTContract() external view returns (ISBTSaleERC721) {
+        return _sbtContract;
+    }
+
+    /// @inheritdoc ISBTSale
+    function mintByOwner(
+        address[] calldata recipients,
+        uint256[] calldata tokenIds
+    ) external onlyOwner {
+        if (recipients.length == 0) {
+            revert NoItems();
+        }
+        if (recipients.length > MAX_BATCH_SIZE) {
+            revert TooManyItems();
+        }
+        if (recipients.length != tokenIds.length) {
+            revert ArrayLengthMismatch();
+        }
+        if (address(_sbtContract) == address(0)) {
+            revert InvalidAddress();
+        }
+
+        uint256 length = recipients.length;
+        for (uint256 i = 0; i < length; ++i) {
+            if (_isZeroAddress(recipients[i])) {
+                revert InvalidAddress();
+            }
+            _sbtContract.safeMint(recipients[i], tokenIds[i]);
+        }
+
+        emit OwnerMinted(msg.sender, recipients, tokenIds);
+    }
+
+    /// @inheritdoc ISBTSale
     /// @dev Note: This method is not a 'view' function due to Balancer V2 design constraints.
     ///            Therefore, callers must explicitly use `eth_call` to call it.
-    function queryPrice(ISBTSaleERC721[] calldata nfts, address paymentToken)
+    function queryPrice(uint256 tokenCount, address paymentToken)
         public
         returns (uint256 price)
     {
@@ -177,79 +283,127 @@ contract SBTSale is ISBTSale, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         /// This method must return the same price regardless of who the caller is.
         /// `IVault.queryBatchSwap` is also designed to not depend on msg.sender's WOAS/SMP balances.
 
-        if (nfts.length == 0) {
+        if (tokenCount == 0) {
             revert NoItems();
         }
         if (!_isValidPaymentToken(paymentToken)) {
             revert InvalidPaymentToken();
         }
 
-        uint256 smpPrice = _getTotalSMPPrice(nfts);
-        return _isSMP(paymentToken) ? smpPrice : _getRequiredOASFromLP(paymentToken, smpPrice);
+        uint256 smpPrice = _getTotalSMPPrice(tokenCount);
+        return _isSMP(paymentToken) ? smpPrice : _getRequiredOASFromLP(smpPrice);
     }
 
     /// @inheritdoc ISBTSale
-    function purchase(ISBTSaleERC721[] calldata nfts, address paymentToken, uint256 amount)
-        external
-        payable
-        nonReentrant
-    {
+    function purchase(
+        uint256[] calldata tokenIds,
+        address buyer,
+        address paymentToken,
+        uint256 amount,
+        uint256 maxSlippageBps,
+        uint256 purchaseId,
+        uint256 deadline,
+        bytes calldata signature
+    ) external payable nonReentrant {
         // Note: Do not call _getRequiredOASFromLP within this method.
         // More precisely, do not call `IVault.queryBatchSwap` within methods that perform actual token swaps.
         // This makes the contract vulnerable to sandwich attacks that exploit the mempool.
         // Reference: https://docs-v2.balancer.fi/reference/swaps/batch-swaps.html#querybatchswap
 
-        if (nfts.length == 0) {
+        // Basic input validation
+        if (tokenIds.length == 0) {
             revert NoItems();
+        }
+        if (tokenIds.length > MAX_BATCH_SIZE) {
+            revert TooManyItems();
         }
         if (!_isValidPaymentToken(paymentToken)) {
             revert InvalidPaymentToken();
         }
+        if (address(_sbtContract) == address(0)) {
+            revert InvalidAddress();
+        }
+
+        // Verify buyer matches msg.sender first
+        if (msg.sender != buyer) {
+            revert BuyerMismatch();
+        }
+
+        // Create purchase order for signature verification
+        PurchaseOrder memory order = PurchaseOrder({
+            purchaseId: purchaseId,
+            buyer: buyer,
+            tokenIds: tokenIds,
+            paymentToken: paymentToken,
+            amount: amount,
+            maxSlippageBps: maxSlippageBps,
+            deadline: deadline
+        });
+
+        // Signature verification
+        if (usedPurchaseIds[purchaseId]) {
+            revert PurchaseIdAlreadyUsed();
+        }
+        if (block.timestamp > deadline) {
+            revert ExpiredDeadline();
+        }
+        if (!_verifyPurchaseOrder(order, signature)) {
+            revert InvalidSignature();
+        }
+
+        // Mark purchase ID as used
+        usedPurchaseIds[purchaseId] = true;
 
         // Receive payment token from buyer
         _receiveToken(msg.sender, paymentToken, amount);
 
+        // Initialize purchase data structure to avoid stack too deep
+        PurchaseData memory data;
+
         // Calculate total SMP price required for all NFTs
-        uint256 requiredSMP = _getTotalSMPPrice(nfts);
+        data.requiredSMP = _getTotalSMPPrice(tokenIds.length);
 
         // Swap payment token to SMP
-        uint256 actualAmount = _payWithSwapToSMP(paymentToken, amount, requiredSMP);
-        uint256 refundAmount = amount - actualAmount;
+        data.actualAmount = _payWithSwapToSMP(paymentToken, amount, data.requiredSMP);
+        data.refundAmount = amount - data.actualAmount;
+        
+        // Validate slippage tolerance
+        _validateSlippage(data.actualAmount, amount, maxSlippageBps);
 
         // Burn configured percentage of SMP
-        uint256 burnSMP = _burnSMP(requiredSMP);
+        data.burnSMP = _burnSMP(data.requiredSMP);
 
         // Provide configured percentage of SMP to liquidity pool
-        uint256 liquiditySMP = _provideLiquidity(requiredSMP);
+        data.liquiditySMP = _provideLiquidity(data.requiredSMP);
 
         // Swap remaining SMP to OAS for protocol revenue
-        uint256 revenueSMP = requiredSMP - burnSMP - liquiditySMP;
-        uint256 revenueOAS;
-        if (revenueSMP > 0) {
-            revenueOAS = _swapSMPtoOASForRevenueRecipient(revenueSMP);
+        data.revenueSMP = data.requiredSMP - data.burnSMP - data.liquiditySMP;
+        if (data.revenueSMP > 0) {
+            data.revenueOAS = _swapSMPtoOASForRevenueRecipient(data.revenueSMP);
         }
 
         // Mint NFTs to buyer
-        _mintNFTs(msg.sender, nfts);
+        _mintNFTs(msg.sender, tokenIds);
 
-        // Refund excess native OAS/WOAS/POAS
-        if (refundAmount > 0) {
-            _refundAnyOAS(msg.sender, paymentToken, refundAmount);
+        // Refund excess native OAS/POAS
+        if (data.refundAmount > 0) {
+            _refundAnyOAS(msg.sender, paymentToken, data.refundAmount);
         }
 
         // Emit comprehensive purchase event
         emit Purchased(
             msg.sender,
-            nfts,
+            tokenIds,
             paymentToken,
-            actualAmount,
-            refundAmount,
-            burnSMP,
-            liquiditySMP,
-            revenueSMP,
-            revenueOAS,
+            data.actualAmount,
+            data.refundAmount,
+            data.burnSMP,
+            data.liquiditySMP,
+            data.revenueSMP,
+            data.revenueOAS,
             _revenueRecipient,
-            _lpRecipient
+            _lpRecipient,
+            purchaseId
         );
     }
 
@@ -258,14 +412,56 @@ contract SBTSale is ISBTSale, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         return addr == address(0);
     }
 
+    /// @dev Validate slippage tolerance
+    /// @param actualAmount Actual amount paid
+    /// @param expectedAmount Expected amount to pay
+    /// @param maxSlippageBps Maximum slippage in basis points (1 BPS = 0.01%)
+    function _validateSlippage(uint256 actualAmount, uint256 expectedAmount, uint256 maxSlippageBps) internal pure {
+        if (actualAmount <= expectedAmount) {
+            // No slippage or favorable slippage, always allowed
+            return;
+        }
+        
+        // Calculate maximum allowed amount with slippage tolerance
+        // maxAllowed = expectedAmount * (10000 + maxSlippageBps) / 10000
+        uint256 maxAllowed = expectedAmount * (MAX_BASIS_POINTS + maxSlippageBps) / MAX_BASIS_POINTS;
+        
+        if (actualAmount > maxAllowed) {
+            revert SlippageExceeded();
+        }
+    }
+
+    /// @dev Hash a PurchaseOrder struct for EIP-712 signature verification
+    function _hashPurchaseOrder(PurchaseOrder memory order) internal view returns (bytes32) {
+        // Convert dynamic array to fixed-size hash for EIP-712
+        // Use abi.encode instead of abi.encodePacked to prevent hash collisions
+        bytes32 tokenIdsHash = keccak256(abi.encode(order.tokenIds));
+        
+        return _hashTypedDataV4(keccak256(abi.encode(
+            PURCHASE_ORDER_TYPEHASH,
+            order.purchaseId,
+            order.buyer,
+            tokenIdsHash,
+            order.paymentToken,
+            order.amount,
+            order.maxSlippageBps,
+            order.deadline
+        )));
+    }
+
+    /// @dev Verify purchase order signature
+    function _verifyPurchaseOrder(PurchaseOrder memory order, bytes calldata signature) internal view returns (bool) {
+        if (_signer == address(0)) {
+            return false;
+        }
+        
+        bytes32 digest = _hashPurchaseOrder(order);
+        return _signer.isValidSignatureNow(digest, signature);
+    }
+
     /// @dev Check if the token is native OAS
     function _isNativeOAS(address paymentToken) internal pure returns (bool) {
         return paymentToken == NATIVE_OAS;
-    }
-
-    /// @dev Check if the token is WOAS
-    function _isWOAS(address paymentToken) internal view returns (bool) {
-        return paymentToken == _woas;
     }
 
     /// @dev Check if the token is POAS
@@ -280,24 +476,36 @@ contract SBTSale is ISBTSale, OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
     /// @dev Validate if the payment token is supported
     function _isValidPaymentToken(address paymentToken) internal view returns (bool) {
-        return _isNativeOAS(paymentToken) || _isWOAS(paymentToken) || _isPOAS(paymentToken)
-            || _isSMP(paymentToken);
+        return _isNativeOAS(paymentToken) || _isPOAS(paymentToken) || _isSMP(paymentToken);
     }
 
-    /// @dev Convert IERC20 array to IAsset array for Balancer V2 compatibility
-    /// @return assets Converted IAsset array
-    /// @return woasIndex Index of WOAS in the assets array
-    /// @return smpIndex Index of SMP in the assets array
-    function _getPoolAssets()
+
+    /// @dev Get pool assets array based on WOAS-SMP pool structure
+    /// @param inputToken Input token for the operation (affects WOAS position in assets array)
+    ///                   - Native OAS/POAS: uses address(0) for Balancer V2 ETH sentinel
+    ///                   - SMP/others: uses _woas address for pool compatibility
+    ///                   Note: Works for both user payments (OAS/POAS/SMP) and internal swaps (SMP→OAS revenue)
+    /// @return assets Assets array following Balancer V2 address-sorted order
+    /// @return woasPoolIndex Index of WOAS position in pool (determined by address ordering)
+    /// @return smpPoolIndex Index of SMP position in pool (determined by address ordering)
+    function _getPoolAssets(address inputToken)
         internal
         view
-        returns (IAsset[] memory assets, uint8 woasIndex, uint8 smpIndex)
+        returns (IAsset[] memory assets, uint8 woasPoolIndex, uint8 smpPoolIndex)
     {
         assets = new IAsset[](2);
-        woasIndex = _woas < _smp ? 0 : 1;
-        smpIndex = woasIndex ^ 1; // 0->1, 1->0
-        assets[woasIndex] = IAsset(_woas);
-        assets[smpIndex] = IAsset(_smp);
+        // Pool structure follows Balancer V2 address ordering requirement
+        woasPoolIndex = _woas < _smp ? 0 : 1;
+        smpPoolIndex = woasPoolIndex ^ 1; // 0->1, 1->0
+        
+        // For native OAS/POAS: use ETH sentinel for Balancer V2 auto-conversion
+        // For SMP/price queries: use actual WOAS address (pool uses WOAS-SMP pair)
+        if (_isNativeOAS(inputToken) || _isPOAS(inputToken)) {
+            assets[woasPoolIndex] = IAsset(address(0)); // ETH sentinel for OAS/POAS inputs
+        } else {
+            assets[woasPoolIndex] = IAsset(_woas); // WOAS address for SMP inputs or price queries
+        }
+        assets[smpPoolIndex] = IAsset(_smp);
     }
 
     /// @dev Get the balance of a token in this contract
@@ -313,23 +521,23 @@ contract SBTSale is ISBTSale, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         }
     }
 
-    /// @dev Get the total SMP price for a list of NFTs
-    /// @param nfts Array of NFT contracts to calculate price for
-    /// @return totalSMPPrice Total SMP required (nfts.length × base price)
-    function _getTotalSMPPrice(ISBTSaleERC721[] calldata nfts)
+    /// @dev Get the total SMP price for a number of NFTs
+    /// @param tokenCount Number of NFTs to calculate price for
+    /// @return totalSMPPrice Total SMP required (tokenCount × base price)
+    function _getTotalSMPPrice(uint256 tokenCount)
         internal
         view
         returns (uint256 totalSMPPrice)
     {
-        uint256 length = nfts.length;
-
-        // Calculate total: each NFT costs the base SMP price
-        for (uint256 i = 0; i < length; ++i) {
-            if (_isZeroAddress(address(nfts[i]))) {
-                revert InvalidAddress();
-            }
-            totalSMPPrice += _smpBasePrice;
+        if (tokenCount == 0) {
+            revert NoItems();
         }
+        if (_smpBasePrice == 0) {
+            revert InvalidPaymentAmount();
+        }
+        
+        // Calculate total: each NFT costs the base SMP price
+        totalSMPPrice = tokenCount * _smpBasePrice;
     }
 
     /// @dev Receive token from buyer and validate amount
@@ -371,17 +579,12 @@ contract SBTSale is ISBTSale, OwnableUpgradeable, ReentrancyGuardUpgradeable {
             revert InvalidPaymentAmount();
         }
 
-        (IAsset[] memory assets, uint8 woasIndex, uint8 smpIndex) = _getPoolAssets();
-        if (
-            _isNativeOAS(swapData.tokenIn) // Native OAS -> SMP
-                || _isPOAS(swapData.tokenIn) // Native OAS (converted from POAS) -> SMP
-                || _isNativeOAS(swapData.tokenOut) // SMP -> Native OAS
-        ) {
-            assets[woasIndex] = IAsset(NATIVE_OAS);
-        }
+        (IAsset[] memory assets, uint8 woasPoolIndex, uint8 smpPoolIndex) = _getPoolAssets(swapData.tokenIn);
+        // Note: Pool actually uses WOAS-SMP pair. Balancer V2 automatically handles
+        // native OAS <-> WOAS conversion when msg.value is provided
 
         // Map tokens to pool asset indices
-        uint8 tokenInIndex = _isSMP(swapData.tokenIn) ? smpIndex : woasIndex;
+        uint8 tokenInIndex = _isSMP(swapData.tokenIn) ? smpPoolIndex : woasPoolIndex;
         uint8 tokenOutIndex = tokenInIndex ^ 1; // Flip index: 0->1, 1->0
 
         // Configure swap parameters
@@ -419,7 +622,7 @@ contract SBTSale is ISBTSale, OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
         int256[] memory deltas;
         if (_isNativeOAS(swapData.tokenIn) || _isPOAS(swapData.tokenIn)) {
-            // Native OAS swap requires msg.value
+            // Native OAS swap: Vault automatically wraps to WOAS internally
             deltas = IVault(_vault).batchSwap{value: swapData.amountIn}({
                 kind: swapKind,
                 swaps: swaps,
@@ -429,7 +632,7 @@ contract SBTSale is ISBTSale, OwnableUpgradeable, ReentrancyGuardUpgradeable {
                 deadline: deadline
             });
         } else {
-            // ERC20 token swap
+            // ERC20 token swap (SMP)
             deltas = IVault(_vault).batchSwap({
                 kind: swapKind,
                 swaps: swaps,
@@ -455,7 +658,7 @@ contract SBTSale is ISBTSale, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     }
 
     /// @dev Swap payment tokens to SMP via WOAS-SMP liquidity pool
-    /// @param paymentToken Token to swap from (NATIVE_OAS/WOAS/POAS)
+    /// @param paymentToken Token to swap from (NATIVE_OAS/POAS)
     /// @param paymentAmount Payment token amount used for swap input
     /// @param requiredSMP SMP token amount required for swap output
     /// @return actualIn Actual input token amount used in swap
@@ -468,11 +671,7 @@ contract SBTSale is ISBTSale, OwnableUpgradeable, ReentrancyGuardUpgradeable {
             // Already SMP, no swap needed
             (actualIn, actualOut) = (paymentAmount, paymentAmount);
         } else {
-            if (_isWOAS(paymentToken)) {
-                IERC20(paymentToken).approve(_vault, paymentAmount);
-            }
-
-            // Execute swap: OAS/WOAS -> SMP
+            // Execute swap: Native OAS -> SMP (Vault handles OAS->WOAS conversion)
             (actualIn, actualOut) = _swap(
                 SwapData({
                     tokenIn: paymentToken, // Native OAS (including converted POAS) is passed as address(0)
@@ -512,20 +711,17 @@ contract SBTSale is ISBTSale, OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
     /// @dev Get required OAS amount from LP to obtain specific SMP amount
     ///      Note: that this function is not 'view' (due to implementation details)
-    /// @param paymentToken Token to swap from (OAS/WOAS/POAS)
     /// @param requiredSMP Required SMP amount to obtain
-    /// @return requiredOAS Required OAS/WOAS amount to swap via LP
-    function _getRequiredOASFromLP(address paymentToken, uint256 requiredSMP)
+    /// @return requiredOAS Required OAS amount to swap via LP (Vault handles WOAS conversion)
+    function _getRequiredOASFromLP(uint256 requiredSMP)
         internal
         returns (uint256 requiredOAS)
     {
-        (IAsset[] memory assets, uint8 woasIndex, uint8 smpIndex) = _getPoolAssets();
-        if (_isNativeOAS(paymentToken) || _isPOAS(paymentToken)) {
-            assets[woasIndex] = IAsset(NATIVE_OAS); // Use native OAS for swap
-        }
+        (IAsset[] memory assets, uint8 woasPoolIndex, uint8 smpPoolIndex) = _getPoolAssets(_woas);
+        // Note: Use WOAS for price queries as pool uses WOAS-SMP pair
 
         // Create swap steps for GIVEN_OUT query
-        IVault.BatchSwapStep[] memory swaps = _createSwapSteps(requiredSMP, woasIndex, smpIndex);
+        IVault.BatchSwapStep[] memory swaps = _createSwapSteps(requiredSMP, woasPoolIndex, smpPoolIndex);
         IVault.FundManagement memory funds = IVault.FundManagement({
             sender: address(this),
             fromInternalBalance: false,
@@ -542,7 +738,7 @@ contract SBTSale is ISBTSale, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         });
 
         // Get required OAS amount (will be positive)
-        requiredOAS = uint256(deltas[woasIndex]);
+        requiredOAS = uint256(deltas[woasPoolIndex]);
     }
 
     /// @dev Burn SMP tokens according to configured burn ratio
@@ -561,10 +757,10 @@ contract SBTSale is ISBTSale, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         providedSMP = (totalSMP * _smpLiquidityRatio) / MAX_BASIS_POINTS;
 
         // Setup pool interaction parameters
-        (IAsset[] memory assets, uint8 woasIndex, uint8 smpIndex) = _getPoolAssets();
+        (IAsset[] memory assets, uint8 woasPoolIndex, uint8 smpPoolIndex) = _getPoolAssets(_woas);
         uint256[] memory maxAmountsIn = new uint256[](2);
-        maxAmountsIn[woasIndex] = 0; // No WOAS
-        maxAmountsIn[smpIndex] = providedSMP; // Only SMP
+        maxAmountsIn[woasPoolIndex] = 0; // No WOAS (single-sided liquidity)
+        maxAmountsIn[smpPoolIndex] = providedSMP; // Only SMP
 
         // Execute pool join with single-sided SMP liquidity
         IVault.JoinPoolRequest memory request = IVault.JoinPoolRequest({
@@ -614,24 +810,26 @@ contract SBTSale is ISBTSale, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         }
     }
 
-    /// @dev Mint NFTs to buyer for each contract in the array
-    /// @param to Address to receive the minted NFTs
-    /// @param nfts Array of NFT contracts to mint from
-    function _mintNFTs(address to, ISBTSaleERC721[] calldata nfts) internal {
-        uint256 length = nfts.length;
+    /// @dev Mint SBTs to buyer from the configured SBT contract
+    /// @param to Address to receive the minted SBTs
+    /// @param tokenIds Array of token IDs to mint
+    function _mintNFTs(address to, uint256[] calldata tokenIds) internal {
+        if (address(_sbtContract) == address(0)) {
+            revert InvalidAddress();
+        }
+        
+        uint256 length = tokenIds.length;
         for (uint256 i = 0; i < length; ++i) {
-            nfts[i].mint(to);
+            _sbtContract.safeMint(to, tokenIds[i]);
         }
     }
 
-    /// @dev Refund excess payment tokens (native OAS/WOAS/POAS) using the same token type
+    /// @dev Refund excess payment tokens (native OAS/POAS) using the same token type
     function _refundAnyOAS(address to, address paymentToken, uint256 amount) internal {
         if (_isNativeOAS(paymentToken)) {
             Address.sendValue(payable(to), amount);
         } else if (_isPOAS(paymentToken)) {
             IPOASMinter(_poasMinter).mint{value: amount}(to, amount);
-        } else if (_isWOAS(paymentToken)) {
-            IERC20(paymentToken).transfer(to, amount);
         }
     }
 

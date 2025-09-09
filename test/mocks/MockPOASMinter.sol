@@ -9,7 +9,7 @@ import {IPOASMinter} from "../../src/interfaces/IPOASMinter.sol";
 
 /**
  * @title MockPOASMinter - Mock version of the pOAS minter contract for testing purposes
- * @dev https://github.com/oasysgames/p-oas-contract/blob/v1.0.4/src/POAS.sol
+ * @dev https://github.com/oasysgames/p-oas-contract/blob/v1.0src/POAS.sol
  */
 contract MockPOASMinter is IPOASMinter {
     /// @inheritdoc IPOASMinter

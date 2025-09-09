@@ -9,9 +9,9 @@ import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
  */
 interface ISBTSaleERC721 is IERC721 {
     /**
-     * @dev Mint a new NFT to the specified address
-     * @param to Address to mint the NFT to
-     * @return tokenId The ID of the newly minted token
+     * @dev Mint a new SBT to the specified address with specified token ID
+     * @param to Address to mint the SBT to
+     * @param tokenId Token ID to mint
      */
-    function mint(address to) external returns (uint256 tokenId);
+    function safeMint(address to, uint256 tokenId) external;
 }

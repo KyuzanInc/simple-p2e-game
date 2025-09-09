@@ -12,6 +12,9 @@ import {SoulboundToken} from "../src/SoulboundToken.sol";
  */
 contract DeploySoulboundToken is Script {
     function run() external returns (TransparentUpgradeableProxy proxy) {
+        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
+        vm.startBroadcast(deployerPrivateKey);
+
         string memory name = vm.envString("SBT_NAME");
         string memory symbol = vm.envString("SBT_SYMBOL");
         string memory baseURI = vm.envString("SBT_BASE_URI");
@@ -22,8 +25,6 @@ contract DeploySoulboundToken is Script {
         console.log("Symbol:", symbol);
         console.log("Base URI:", baseURI);
         console.log("Admin:", admin);
-
-        vm.startBroadcast();
 
         SoulboundToken implementation = new SoulboundToken();
         proxy = new TransparentUpgradeableProxy(

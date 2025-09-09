@@ -12,6 +12,9 @@ import {SBTSale} from "../src/SBTSale.sol";
  */
 contract DeploySBTSale is Script {
     function run() external returns (TransparentUpgradeableProxy proxy) {
+        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
+        vm.startBroadcast(deployerPrivateKey);
+
         address poasMinter = vm.envAddress("P2E_POAS_MINTER");
         address liquidityPool = vm.envAddress("P2E_LIQUIDITY_POOL");
         address lpRecipient = vm.envAddress("P2E_LP_RECIPIENT");
@@ -30,8 +33,6 @@ contract DeploySBTSale is Script {
         console.log("SMP Burn Ratio:", smpBurnRatio);
         console.log("SMP Liquidity Ratio:", smpLiquidityRatio);
         console.log("Admin:", admin);
-
-        vm.startBroadcast();
 
         SBTSale implementation = new SBTSale(
             poasMinter,

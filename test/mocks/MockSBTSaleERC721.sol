@@ -11,9 +11,6 @@ import {ISBTSaleERC721} from "../../src/interfaces/ISBTSaleERC721.sol";
  *      Only the designated SBTSale contract can mint tokens.
  */
 contract MockSBTSaleERC721 is ISBTSaleERC721, ERC721 {
-    /// @dev Counter for generating unique token IDs, starting from 0
-    uint256 private _nextTokenId;
-
     /// @notice Address of the SBTSale contract that is allowed to mint tokens
     address public immutable sbtSale;
 
@@ -28,18 +25,14 @@ contract MockSBTSaleERC721 is ISBTSaleERC721, ERC721 {
     }
 
     /**
-     * @notice Mint a new NFT to the specified address
+     * @notice Mint a new SBT to the specified address with specified token ID
      * @dev Only the SBTSale contract can call this function
-     * @param to Address to mint the NFT to
-     * @return tokenId The ID of the newly minted token
+     * @param to Address to mint the SBT to
+     * @param tokenId Token ID to mint
      */
-    function mint(address to) external returns (uint256 tokenId) {
+    function safeMint(address to, uint256 tokenId) external {
         require(msg.sender == sbtSale, "Only SBTSale can mint");
-
-        // Generate unique token ID and increment counter
-        tokenId = _nextTokenId++;
-
-        // Mint the token to the specified address
         _mint(to, tokenId);
     }
+
 }
