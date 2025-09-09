@@ -7,10 +7,10 @@ import {MockBasicAuthorizer} from "@balancer-labs/v2-vault/contracts/test/MockBa
 import {WeightedPoolFactory} from
     "@balancer-labs/v2-pool-weighted/contracts/WeightedPoolFactory.sol";
 
-import {WOAS} from "../contracts/test-utils/WOAS.sol";
+import {WOAS} from "../test/helpers/WOAS.sol";
 import {MockProtocolFeePercentagesProvider} from
-    "../contracts/test-utils/MockProtocolFeePercentagesProvider.sol";
-import {BalancerV2Helper} from "../contracts/test-utils/BalancerV2Helper.sol";
+    "../test/mocks/MockProtocolFeePercentagesProvider.sol";
+import {BalancerV2Helper} from "../test/helpers/BalancerV2Helper.sol";
 
 /**
  * @title GenerateDeployers
@@ -63,7 +63,7 @@ contract GenerateDeployers is Script {
 
     function _writeFile(string memory name, string memory deployCode) internal {
         vm.writeFile(
-            vm.replace("contracts/test-utils/deployers/__REPL__.sol", "__REPL__", name), deployCode
+            vm.replace("test/helpers/deployers/__REPL__.sol", "__REPL__", name), deployCode
         );
     }
 

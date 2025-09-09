@@ -10,24 +10,24 @@ import {IERC20} from "@balancer-labs/v2-interfaces/contracts/solidity-utils/open
 import {IVault} from "@balancer-labs/v2-interfaces/contracts/vault/IVault.sol";
 
 // Local contracts and interfaces
-import {SBTSale} from "../contracts/SBTSale.sol";
-import {ISBTSale} from "../contracts/interfaces/ISBTSale.sol";
-import {IVaultPool} from "../contracts/interfaces/IVaultPool.sol";
-import {ISBTSaleERC721} from "../contracts/interfaces/ISBTSaleERC721.sol";
-import {IPOAS} from "../contracts/interfaces/IPOAS.sol";
-import {IPOASMinter} from "../contracts/interfaces/IPOASMinter.sol";
-import {IWOAS} from "../contracts/interfaces/IWOAS.sol";
+import {SBTSale} from "../src/SBTSale.sol";
+import {ISBTSale} from "../src/interfaces/ISBTSale.sol";
+import {IVaultPool} from "../src/interfaces/IVaultPool.sol";
+import {ISBTSaleERC721} from "../src/interfaces/ISBTSaleERC721.sol";
+import {IPOAS} from "../src/interfaces/IPOAS.sol";
+import {IPOASMinter} from "../src/interfaces/IPOASMinter.sol";
+import {IWOAS} from "../src/interfaces/IWOAS.sol";
 
 // Test utilities
-import {VaultDeployer} from "../contracts/test-utils/deployers/VaultDeployer.sol";
+import {VaultDeployer} from "./helpers/deployers/VaultDeployer.sol";
 import {WeightedPoolFactoryDeployer} from
-    "../contracts/test-utils/deployers/WeightedPoolFactoryDeployer.sol";
+    "./helpers/deployers/WeightedPoolFactoryDeployer.sol";
 import {BalancerV2HelperDeployer} from
-    "../contracts/test-utils/deployers/BalancerV2HelperDeployer.sol";
-import {IBalancerV2Helper} from "../contracts/test-utils/interfaces/IBalancerV2Helper.sol";
-import {MockSMP} from "../contracts/test-utils/MockSMPv8.sol";
-import {MockPOASMinter} from "../contracts/test-utils/MockPOASMinter.sol";
-import {MockSBTSaleERC721} from "../contracts/test-utils/MockSBTSaleERC721.sol";
+    "./helpers/deployers/BalancerV2HelperDeployer.sol";
+import {IBalancerV2Helper} from "./helpers/interfaces/IBalancerV2Helper.sol";
+import {MockSMP} from "./mocks/MockSMPv8.sol";
+import {MockPOASMinter} from "./mocks/MockPOASMinter.sol";
+import {MockSBTSaleERC721} from "./mocks/MockSBTSaleERC721.sol";
 
 contract SBTSaleTest is Test {
     ISBTSale p2e;

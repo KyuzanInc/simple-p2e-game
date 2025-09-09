@@ -12,7 +12,7 @@ import {ITransparentUpgradeableProxy} from
     "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
-import {SoulboundToken} from "../contracts/SoulboundToken.sol";
+import {SoulboundToken} from "../src/SoulboundToken.sol";
 
 contract SoulboundTokenTest is Test {
     SoulboundToken sbt;

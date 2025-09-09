@@ -8,7 +8,7 @@ import {IRateProvider} from "@balancer-labs/v2-interfaces/contracts/pool-utils/I
 import {IVault} from "@balancer-labs/v2-interfaces/contracts/vault/IVault.sol";
 
 // Local Interfaces
-import {IVaultPool} from "../../interfaces/IVaultPool.sol";
+import {IVaultPool} from "../../../src/interfaces/IVaultPool.sol";
 import {IWeightedPoolFactory} from "./IWeightedPoolFactory.sol";
 
 /**

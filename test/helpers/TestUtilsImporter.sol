@@ -15,14 +15,14 @@ import {IBasePoolFactory} from
     "@balancer-labs/v2-interfaces/contracts/pool-utils/IBasePoolFactory.sol";
 
 // SBTSale
-import {IVaultPool} from "../interfaces/IVaultPool.sol";
-import {IPOAS} from "../interfaces/IPOAS.sol";
-import {IPOASMinter} from "../interfaces/IPOASMinter.sol";
-import {ISBTSale} from "../interfaces/ISBTSale.sol";
-import {IWOAS} from "../interfaces/IWOAS.sol";
-import {ISBTSaleERC721} from "../interfaces/ISBTSaleERC721.sol";
-import {SBTSale} from "../SBTSale.sol";
-import {SoulboundToken} from "../SoulboundToken.sol";
+import {IVaultPool} from "../../src/interfaces/IVaultPool.sol";
+import {IPOAS} from "../../src/interfaces/IPOAS.sol";
+import {IPOASMinter} from "../../src/interfaces/IPOASMinter.sol";
+import {ISBTSale} from "../../src/interfaces/ISBTSale.sol";
+import {IWOAS} from "../../src/interfaces/IWOAS.sol";
+import {ISBTSaleERC721} from "../../src/interfaces/ISBTSaleERC721.sol";
+import {SBTSale} from "../../src/SBTSale.sol";
+import {SoulboundToken} from "../../src/SoulboundToken.sol";
 
 // Test utilities
 import {IBalancerV2Helper} from "./interfaces/IBalancerV2Helper.sol";
@@ -31,7 +31,7 @@ import {IWeightedPoolFactory} from "./interfaces/IWeightedPoolFactory.sol";
 import {VaultDeployer, IMinimumAuthorizer} from "./deployers/VaultDeployer.sol";
 import {WeightedPoolFactoryDeployer} from "./deployers/WeightedPoolFactoryDeployer.sol";
 import {BalancerV2HelperDeployer} from "./deployers/BalancerV2HelperDeployer.sol";
-import {MockSBTSaleERC721} from "./MockSBTSaleERC721.sol";
-import {MockPOAS} from "./MockPOAS.sol";
-import {MockPOASMinter} from "./MockPOASMinter.sol";
-import {MockSMP} from "./MockSMPv8.sol";
+import {MockSBTSaleERC721} from "../mocks/MockSBTSaleERC721.sol";
+import {MockPOAS} from "../mocks/MockPOAS.sol";
+import {MockPOASMinter} from "../mocks/MockPOASMinter.sol";
+import {MockSMP} from "../mocks/MockSMPv8.sol";

@@ -8,6 +8,9 @@ A Play-to-Earn (P2E) project where players earn SMP (Simple) Tokens—a cryptocu
   - Note: This project uses [Foundry](https://getfoundry.sh/). Please make sure Foundry is installed beforehand.
 
 ```sh
+# Initialize git submodules (required for Foundry dependencies)
+git submodule update --init --recursive
+
 # Install dependencies
 npm install
 
@@ -22,11 +25,11 @@ npm test
 
 - SimpleGame
   - The main contract that users interact with to play the game. (Not yet implemented.)
-- [SBTSale](./contracts/SBTSale.sol)
+- [SBTSale](./src/SBTSale.sol)
   - Contract used to sell SBTs (Soulbound Tokens). Supports payment in SMP Token,
     native OAS, Wrapped OAS, and pOAS.
   - The price of each SBT is denominated in SMP tokens. When other tokens are used for payment, they are swapped to SMP via the Gaming DEX.
-- [SoulboundToken](./contracts/SoulboundToken.sol)
+- [SoulboundToken](./src/SoulboundToken.sol)
   - An SBT (Soulbound Token) contract representing "Cards" used in the game.
   - The token itself does not have an expiration date. Ownership is permanent once minted, as with typical soulbound tokens. Expiration is handled separately by the game contract, not the token itself.
 - SMP
