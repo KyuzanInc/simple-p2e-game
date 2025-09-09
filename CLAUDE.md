@@ -6,6 +6,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a Play-to-Earn (P2E) game smart contract project built on the Oasys blockchain. The project uses Foundry for development and testing, with upgradeable contracts following OpenZeppelin standards.
 
+## Git Repository Structure
+
+- **origin**: `KyuzanInc/simple-p2e-game` - The main fork repository where PRs should be created
+- **upstream**: `oasysgames/simple-p2e-game` - The original repository (used for syncing updates)
+
+**Important**: When creating PRs, always create them against the `origin` repository (KyuzanInc), not upstream.
+
 ## Development Commands
 
 ```bash
