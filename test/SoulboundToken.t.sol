@@ -26,6 +26,7 @@ contract SoulboundTokenTest is Test {
     // Get role constants before vm.expectRevert to avoid revert interference
     bytes32 constant DEFAULT_ADMIN_ROLE = 0x0;
     bytes32 constant MINTER_ROLE = keccak256("MINTER_ROLE");
+    bytes32 constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
 
     function setUp() public {
         owner = makeAddr("owner");
@@ -60,6 +61,7 @@ contract SoulboundTokenTest is Test {
     function test_initialize_sets_roles() public {
         assertTrue(sbt.hasRole(DEFAULT_ADMIN_ROLE, owner));
         assertTrue(sbt.hasRole(MINTER_ROLE, owner));
+        assertTrue(sbt.hasRole(PAUSER_ROLE, owner));
         assertEq(sbt.name(), "Soulbound");
         assertEq(sbt.symbol(), "SBT");
     }
@@ -67,7 +69,7 @@ contract SoulboundTokenTest is Test {
     function test_safeMint_sets_mintedAt() public {
         vm.warp(1000);
         vm.prank(owner);
-        sbt.safeMint(user, 1, "");
+        sbt.safeMint(user, 1);
         assertEq(sbt.ownerOf(1), user);
         assertEq(sbt.mintTimeOf(1), block.timestamp);
     }
@@ -79,53 +81,25 @@ contract SoulboundTokenTest is Test {
             )
         );
         vm.prank(user);
-        sbt.mint(user);
+        sbt.safeMint(user, 1);
     }
 
-    function test_mint() public {
-        vm.warp(500);
-        vm.prank(owner);
-        uint256 tokenId = sbt.mint(user);
-
-        assertEq(tokenId, 0);
-        assertEq(sbt.ownerOf(tokenId), user);
-        assertEq(sbt.mintTimeOf(tokenId), 500);
-        assertEq(sbt.balanceOf(user), 1);
-    }
-
-    function test_burn_holder() public {
-        vm.prank(owner);
-        sbt.safeMint(user, 1, "");
-        vm.prank(user);
-        sbt.burn(1);
-        assertEq(sbt.mintTimeOf(1), 0);
-    }
-
-    function test_burn_unauthorized() public {
-        vm.prank(owner);
-        sbt.safeMint(user, 1, "");
-        vm.expectRevert(
-            abi.encodeWithSelector(IERC721Errors.ERC721InsufficientApproval.selector, owner, 1)
-        );
-        vm.prank(owner);
-        sbt.burn(1);
-    }
 
     function test_tokenURI_and_baseURI_update() public {
         vm.prank(owner);
-        sbt.safeMint(owner, 1, "");
+        sbt.safeMint(owner, 1);
         assertEq(sbt.tokenURI(1), string.concat(BASE_URI, "1"));
         string memory newURI = "ipfs://new/";
         vm.prank(owner);
         sbt.setBaseURI(newURI);
         vm.prank(owner);
-        sbt.safeMint(owner, 2, "");
+        sbt.safeMint(owner, 2);
         assertEq(sbt.tokenURI(2), string.concat(newURI, "2"));
     }
 
     function test_non_transferable() public {
         vm.prank(owner);
-        sbt.safeMint(owner, 1, "");
+        sbt.safeMint(owner, 1);
         vm.expectRevert(SoulboundToken.Soulbound.selector);
         sbt.transferFrom(owner, user, 1);
         vm.expectRevert(SoulboundToken.Soulbound.selector);
@@ -145,7 +119,7 @@ contract SoulboundTokenTest is Test {
         sbt.grantRole(MINTER_ROLE, minter);
         assertTrue(sbt.hasRole(MINTER_ROLE, minter));
         vm.prank(minter);
-        sbt.mint(minter);
+        sbt.safeMint(minter, 0);
         assertEq(sbt.ownerOf(0), minter);
     }
 
@@ -159,30 +133,12 @@ contract SoulboundTokenTest is Test {
         sbt.grantRole(MINTER_ROLE, minter);
     }
 
-    function test_assignTokenId() public {
-        // first mint token id 0
-        vm.prank(owner);
-        sbt.mint(user);
-
-        // second mint token id 1, 2, 3
-        for (uint256 i = 1; i < 4; ++i) {
-            vm.prank(owner);
-            sbt.safeMint(user, i, "");
-        }
-
-        // third mint token id 4
-        vm.prank(owner);
-        sbt.mint(user);
-        assertEq(sbt.ownerOf(4), user);
-        assertEq(sbt.mintTimeOf(4), block.timestamp);
-        assertEq(sbt.balanceOf(user), 5);
-    }
 
     function test_upgrade() public {
-        // mint token id 0
+        // mint token id 1
         vm.prank(owner);
-        sbt.mint(user);
-        uint256 mintedAt = sbt.mintTimeOf(0);
+        sbt.safeMint(user, 1);
+        uint256 mintedAt = sbt.mintTimeOf(1);
 
         // deploy v2 and upgrade
         SoulboundToken newImpl = new SoulboundToken();
@@ -191,23 +147,23 @@ contract SoulboundTokenTest is Test {
             ITransparentUpgradeableProxy(address(proxy)), address(newImpl), ""
         );
 
-        // check token id 0
-        assertEq(sbt.ownerOf(0), user);
-        assertEq(sbt.mintTimeOf(0), mintedAt);
-
-        // mint token id 1
-        vm.prank(owner);
-        sbt.mint(user);
-
         // check token id 1
         assertEq(sbt.ownerOf(1), user);
-        assertEq(sbt.mintTimeOf(1), block.timestamp);
+        assertEq(sbt.mintTimeOf(1), mintedAt);
+
+        // mint token id 2
+        vm.prank(owner);
+        sbt.safeMint(user, 2);
+
+        // check token id 2
+        assertEq(sbt.ownerOf(2), user);
+        assertEq(sbt.mintTimeOf(2), block.timestamp);
     }
 
     function test_upgrade_restricted() public {
-        // mint token id 1 using v1 implementation
+        // mint token id 1 using current implementation
         vm.prank(owner);
-        sbt.safeMint(user, 1, "");
+        sbt.safeMint(user, 1);
 
         // deploy v2 and upgrade
         SoulboundToken newImpl = new SoulboundToken();
@@ -216,5 +172,81 @@ contract SoulboundTokenTest is Test {
         proxyAdmin.upgradeAndCall(
             ITransparentUpgradeableProxy(address(proxy)), address(newImpl), ""
         );
+    }
+
+    // Test new Pausable functionality
+    function test_pause_unpause_access_control() public {
+        // Owner can pause
+        vm.prank(owner);
+        sbt.pause();
+        assertTrue(sbt.paused());
+
+        // Owner can unpause
+        vm.prank(owner);
+        sbt.unpause();
+        assertFalse(sbt.paused());
+
+        // Non-pauser cannot pause
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector, user, PAUSER_ROLE
+            )
+        );
+        vm.prank(user);
+        sbt.pause();
+    }
+
+    function test_mint_when_paused_reverts() public {
+        // Pause the contract
+        vm.prank(owner);
+        sbt.pause();
+
+        // Minting should revert when paused
+        vm.expectRevert(); // Pausable will revert
+        vm.prank(owner);
+        sbt.safeMint(user, 1);
+
+        // Unpause and minting should work
+        vm.prank(owner);
+        sbt.unpause();
+        vm.prank(owner);
+        sbt.safeMint(user, 1);
+        assertEq(sbt.ownerOf(1), user);
+    }
+
+    // Test Enumerable functionality
+    function test_enumerable_totalSupply() public {
+        assertEq(sbt.totalSupply(), 0);
+
+        vm.prank(owner);
+        sbt.safeMint(user, 1);
+        assertEq(sbt.totalSupply(), 1);
+
+        vm.prank(owner);
+        sbt.safeMint(minter, 2);
+        assertEq(sbt.totalSupply(), 2);
+    }
+
+    function test_enumerable_tokenByIndex() public {
+        vm.prank(owner);
+        sbt.safeMint(user, 10);
+        vm.prank(owner);
+        sbt.safeMint(minter, 20);
+
+        assertEq(sbt.tokenByIndex(0), 10);
+        assertEq(sbt.tokenByIndex(1), 20);
+    }
+
+    function test_enumerable_tokenOfOwnerByIndex() public {
+        vm.prank(owner);
+        sbt.safeMint(user, 10);
+        vm.prank(owner);
+        sbt.safeMint(user, 20);
+        vm.prank(owner);
+        sbt.safeMint(minter, 30);
+
+        assertEq(sbt.tokenOfOwnerByIndex(user, 0), 10);
+        assertEq(sbt.tokenOfOwnerByIndex(user, 1), 20);
+        assertEq(sbt.tokenOfOwnerByIndex(minter, 0), 30);
     }
 }
