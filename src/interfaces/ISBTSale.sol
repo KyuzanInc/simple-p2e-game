@@ -22,7 +22,7 @@ import {ISBTSaleERC721} from "./ISBTSaleERC721.sol";
 interface ISBTSale {
     // Signature verification structure for EIP-712
     struct PurchaseOrder {
-        uint256 purchaseId;  // Globally unique purchase ID
+        uint256 purchaseId; // Globally unique purchase ID
         address buyer;
         uint256[] tokenIds;
         address paymentToken;
@@ -44,7 +44,7 @@ interface ISBTSale {
     error ArrayLengthMismatch(); // 0xa24a13a6
     error TransferFailed(); // 0x90b8ec18
     error InvalidSignature(); // 0x8baa579f
-    error ExpiredDeadline(); // 0x3a5c06d1  
+    error ExpiredDeadline(); // 0x3a5c06d1
     error PurchaseIdAlreadyUsed(); // 0x715018a6
     error InvalidSigner(); // 0xafb5b3b8
     error BuyerMismatch(); // 0x892b78e2
@@ -89,16 +89,11 @@ interface ISBTSale {
     /// @param newSBTContract New SBT contract address
     event SBTContractUpdated(address indexed oldSBTContract, address indexed newSBTContract);
 
-
     /// @dev Emitted when owner mints SBTs directly
     /// @param owner Address of the contract owner
     /// @param recipients Array of addresses receiving SBTs
     /// @param tokenIds Array of token IDs minted
-    event OwnerMinted(
-        address indexed owner,
-        address[] recipients,
-        uint256[] tokenIds
-    );
+    event OwnerMinted(address indexed owner, address[] recipients, uint256[] tokenIds);
 
     /**
      * @dev Query total required token amount for purchasing specified number of SBTs
@@ -115,9 +110,7 @@ interface ISBTSale {
      * @param token Token address for payment (native OAS: 0x0, POAS, or SMP)
      * @return price Total required token amount for all SBTs
      */
-    function queryPrice(uint256 tokenCount, address token)
-        external
-        returns (uint256 price);
+    function queryPrice(uint256 tokenCount, address token) external returns (uint256 price);
 
     /**
      * @dev Purchase SBTs using server-signed authorization
@@ -176,10 +169,7 @@ interface ISBTSale {
      * @param recipients Array of addresses to receive the minted SBTs
      * @param tokenIds Array of token IDs to mint from the configured SBT contract
      */
-    function mintByOwner(
-        address[] calldata recipients,
-        uint256[] calldata tokenIds
-    ) external;
+    function mintByOwner(address[] calldata recipients, uint256[] calldata tokenIds) external;
 
     /**
      * @dev Set the authorized server signer address
@@ -223,7 +213,7 @@ interface ISBTSale {
     // View functions
 
     /**
-     * @dev Get current WOAS address  
+     * @dev Get current WOAS address
      * @return woas Current WOAS token address (used internally for Balancer V2 pool)
      */
     function getWOAS() external view returns (address woas);

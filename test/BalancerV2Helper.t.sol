@@ -10,13 +10,9 @@ import {IERC20} from "@balancer-labs/v2-interfaces/contracts/solidity-utils/open
 import {IVault} from "@balancer-labs/v2-interfaces/contracts/vault/IVault.sol";
 
 // Local Test Utilities
-import {
-    VaultDeployer, IMinimumAuthorizer
-} from "./helpers/deployers/VaultDeployer.sol";
-import {WeightedPoolFactoryDeployer} from
-    "./helpers/deployers/WeightedPoolFactoryDeployer.sol";
-import {BalancerV2HelperDeployer} from
-    "./helpers/deployers/BalancerV2HelperDeployer.sol";
+import {VaultDeployer, IMinimumAuthorizer} from "./helpers/deployers/VaultDeployer.sol";
+import {WeightedPoolFactoryDeployer} from "./helpers/deployers/WeightedPoolFactoryDeployer.sol";
+import {BalancerV2HelperDeployer} from "./helpers/deployers/BalancerV2HelperDeployer.sol";
 import {IBalancerV2Helper} from "./helpers/interfaces/IBalancerV2Helper.sol";
 import {IVaultPool} from "../src/interfaces/IVaultPool.sol";
 import {IMockSMP} from "./helpers/interfaces/IMockSMP.sol";
