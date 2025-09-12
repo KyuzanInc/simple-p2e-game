@@ -9,7 +9,8 @@ import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {ReentrancyGuardUpgradeable} from
     "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
-import {EIP712Upgradeable} from "@openzeppelin/contracts-upgradeable/utils/cryptography/EIP712Upgradeable.sol";
+import {EIP712Upgradeable} from
+    "@openzeppelin/contracts-upgradeable/utils/cryptography/EIP712Upgradeable.sol";
 import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 
@@ -62,7 +63,7 @@ contract SBTSale is ISBTSale, OwnableUpgradeable, ReentrancyGuardUpgradeable, EI
 
     // Basis points for ratio calculations (10000 = 100%)
     uint256 public constant MAX_BASIS_POINTS = 10_000;
-    
+
     // Maximum batch size for array operations
     uint256 public constant MAX_BATCH_SIZE = 200;
 
@@ -222,17 +223,19 @@ contract SBTSale is ISBTSale, OwnableUpgradeable, ReentrancyGuardUpgradeable, EI
         if (address(newSBTContract) == address(0)) {
             revert InvalidAddress();
         }
-        
+
         // Verify contract implements required interface using ERC-165
         // Check for ERC721 interface support (0x80ac58cd) which ISBTSaleERC721 extends
-        try IERC165(address(newSBTContract)).supportsInterface(0x80ac58cd) returns (bool supportsERC721) {
+        try IERC165(address(newSBTContract)).supportsInterface(0x80ac58cd) returns (
+            bool supportsERC721
+        ) {
             if (!supportsERC721) {
                 revert InvalidAddress();
             }
         } catch {
             revert InvalidAddress();
         }
-        
+
         ISBTSaleERC721 oldContract = _sbtContract;
         _sbtContract = newSBTContract;
         emit SBTContractUpdated(address(oldContract), address(newSBTContract));
@@ -244,10 +247,10 @@ contract SBTSale is ISBTSale, OwnableUpgradeable, ReentrancyGuardUpgradeable, EI
     }
 
     /// @inheritdoc ISBTSale
-    function mintByOwner(
-        address[] calldata recipients,
-        uint256[] calldata tokenIds
-    ) external onlyOwner {
+    function mintByOwner(address[] calldata recipients, uint256[] calldata tokenIds)
+        external
+        onlyOwner
+    {
         if (recipients.length == 0) {
             revert NoItems();
         }
@@ -275,10 +278,7 @@ contract SBTSale is ISBTSale, OwnableUpgradeable, ReentrancyGuardUpgradeable, EI
     /// @inheritdoc ISBTSale
     /// @dev Note: This method is not a 'view' function due to Balancer V2 design constraints.
     ///            Therefore, callers must explicitly use `eth_call` to call it.
-    function queryPrice(uint256 tokenCount, address paymentToken)
-        public
-        returns (uint256 price)
-    {
+    function queryPrice(uint256 tokenCount, address paymentToken) public returns (uint256 price) {
         /// Note: Do not check msg.sender's token balances in this method or related methods.
         /// This method must return the same price regardless of who the caller is.
         /// `IVault.queryBatchSwap` is also designed to not depend on msg.sender's WOAS/SMP balances.
@@ -366,7 +366,7 @@ contract SBTSale is ISBTSale, OwnableUpgradeable, ReentrancyGuardUpgradeable, EI
         // Swap payment token to SMP
         data.actualAmount = _payWithSwapToSMP(paymentToken, amount, data.requiredSMP);
         data.refundAmount = amount - data.actualAmount;
-        
+
         // Validate slippage tolerance
         _validateSlippage(data.actualAmount, amount, maxSlippageBps);
 
@@ -416,16 +416,19 @@ contract SBTSale is ISBTSale, OwnableUpgradeable, ReentrancyGuardUpgradeable, EI
     /// @param actualAmount Actual amount paid
     /// @param expectedAmount Expected amount to pay
     /// @param maxSlippageBps Maximum slippage in basis points (1 BPS = 0.01%)
-    function _validateSlippage(uint256 actualAmount, uint256 expectedAmount, uint256 maxSlippageBps) internal pure {
+    function _validateSlippage(uint256 actualAmount, uint256 expectedAmount, uint256 maxSlippageBps)
+        internal
+        pure
+    {
         if (actualAmount <= expectedAmount) {
             // No slippage or favorable slippage, always allowed
             return;
         }
-        
+
         // Calculate maximum allowed amount with slippage tolerance
         // maxAllowed = expectedAmount * (10000 + maxSlippageBps) / 10000
         uint256 maxAllowed = expectedAmount * (MAX_BASIS_POINTS + maxSlippageBps) / MAX_BASIS_POINTS;
-        
+
         if (actualAmount > maxAllowed) {
             revert SlippageExceeded();
         }
@@ -436,25 +439,33 @@ contract SBTSale is ISBTSale, OwnableUpgradeable, ReentrancyGuardUpgradeable, EI
         // Convert dynamic array to fixed-size hash for EIP-712
         // Use abi.encode instead of abi.encodePacked to prevent hash collisions
         bytes32 tokenIdsHash = keccak256(abi.encode(order.tokenIds));
-        
-        return _hashTypedDataV4(keccak256(abi.encode(
-            PURCHASE_ORDER_TYPEHASH,
-            order.purchaseId,
-            order.buyer,
-            tokenIdsHash,
-            order.paymentToken,
-            order.amount,
-            order.maxSlippageBps,
-            order.deadline
-        )));
+
+        return _hashTypedDataV4(
+            keccak256(
+                abi.encode(
+                    PURCHASE_ORDER_TYPEHASH,
+                    order.purchaseId,
+                    order.buyer,
+                    tokenIdsHash,
+                    order.paymentToken,
+                    order.amount,
+                    order.maxSlippageBps,
+                    order.deadline
+                )
+            )
+        );
     }
 
     /// @dev Verify purchase order signature
-    function _verifyPurchaseOrder(PurchaseOrder memory order, bytes calldata signature) internal view returns (bool) {
+    function _verifyPurchaseOrder(PurchaseOrder memory order, bytes calldata signature)
+        internal
+        view
+        returns (bool)
+    {
         if (_signer == address(0)) {
             return false;
         }
-        
+
         bytes32 digest = _hashPurchaseOrder(order);
         return _signer.isValidSignatureNow(digest, signature);
     }
@@ -479,16 +490,11 @@ contract SBTSale is ISBTSale, OwnableUpgradeable, ReentrancyGuardUpgradeable, EI
         return _isNativeOAS(paymentToken) || _isPOAS(paymentToken) || _isSMP(paymentToken);
     }
 
-
-    /// @dev Get pool assets array based on WOAS-SMP pool structure
-    /// @param inputToken Input token for the operation (affects WOAS position in assets array)
-    ///                   - Native OAS/POAS: uses address(0) for Balancer V2 ETH sentinel
-    ///                   - SMP/others: uses _woas address for pool compatibility
-    ///                   Note: Works for both user payments (OAS/POAS/SMP) and internal swaps (SMP→OAS revenue)
-    /// @return assets Assets array following Balancer V2 address-sorted order
+    /// @dev Get pool assets array for WOAS-SMP pool
+    /// @return assets Assets array with WOAS and SMP addresses following Balancer V2 address-sorted order
     /// @return woasPoolIndex Index of WOAS position in pool (determined by address ordering)
     /// @return smpPoolIndex Index of SMP position in pool (determined by address ordering)
-    function _getPoolAssets(address inputToken)
+    function _getPoolAssets()
         internal
         view
         returns (IAsset[] memory assets, uint8 woasPoolIndex, uint8 smpPoolIndex)
@@ -497,14 +503,10 @@ contract SBTSale is ISBTSale, OwnableUpgradeable, ReentrancyGuardUpgradeable, EI
         // Pool structure follows Balancer V2 address ordering requirement
         woasPoolIndex = _woas < _smp ? 0 : 1;
         smpPoolIndex = woasPoolIndex ^ 1; // 0->1, 1->0
-        
-        // For native OAS/POAS: use ETH sentinel for Balancer V2 auto-conversion
-        // For SMP/price queries: use actual WOAS address (pool uses WOAS-SMP pair)
-        if (_isNativeOAS(inputToken) || _isPOAS(inputToken)) {
-            assets[woasPoolIndex] = IAsset(address(0)); // ETH sentinel for OAS/POAS inputs
-        } else {
-            assets[woasPoolIndex] = IAsset(_woas); // WOAS address for SMP inputs or price queries
-        }
+
+        // Always return WOAS and SMP addresses
+        // Caller will replace with ETH sentinel (address(0)) if needed for OAS/POAS operations
+        assets[woasPoolIndex] = IAsset(_woas);
         assets[smpPoolIndex] = IAsset(_smp);
     }
 
@@ -524,18 +526,14 @@ contract SBTSale is ISBTSale, OwnableUpgradeable, ReentrancyGuardUpgradeable, EI
     /// @dev Get the total SMP price for a number of NFTs
     /// @param tokenCount Number of NFTs to calculate price for
     /// @return totalSMPPrice Total SMP required (tokenCount × base price)
-    function _getTotalSMPPrice(uint256 tokenCount)
-        internal
-        view
-        returns (uint256 totalSMPPrice)
-    {
+    function _getTotalSMPPrice(uint256 tokenCount) internal view returns (uint256 totalSMPPrice) {
         if (tokenCount == 0) {
             revert NoItems();
         }
         if (_smpBasePrice == 0) {
             revert InvalidPaymentAmount();
         }
-        
+
         // Calculate total: each NFT costs the base SMP price
         totalSMPPrice = tokenCount * _smpBasePrice;
     }
@@ -579,9 +577,15 @@ contract SBTSale is ISBTSale, OwnableUpgradeable, ReentrancyGuardUpgradeable, EI
             revert InvalidPaymentAmount();
         }
 
-        (IAsset[] memory assets, uint8 woasPoolIndex, uint8 smpPoolIndex) = _getPoolAssets(swapData.tokenIn);
-        // Note: Pool actually uses WOAS-SMP pair. Balancer V2 automatically handles
-        // native OAS <-> WOAS conversion when msg.value is provided
+        (IAsset[] memory assets, uint8 woasPoolIndex, uint8 smpPoolIndex) = _getPoolAssets();
+
+        // Replace WOAS with ETH sentinel for native OAS/POAS operations
+        // Balancer V2 automatically handles OAS <-> WOAS conversion when msg.value is provided
+        // Check both tokenIn and tokenOut - one of them must be OAS/POAS when swapping with SMP
+        if (_isNativeOAS(swapData.tokenIn) || _isPOAS(swapData.tokenIn) || 
+            _isNativeOAS(swapData.tokenOut) || _isPOAS(swapData.tokenOut)) {
+            assets[woasPoolIndex] = IAsset(address(0)); // ETH sentinel for OAS/POAS
+        }
 
         // Map tokens to pool asset indices
         uint8 tokenInIndex = _isSMP(swapData.tokenIn) ? smpPoolIndex : woasPoolIndex;
@@ -713,15 +717,19 @@ contract SBTSale is ISBTSale, OwnableUpgradeable, ReentrancyGuardUpgradeable, EI
     ///      Note: that this function is not 'view' (due to implementation details)
     /// @param requiredSMP Required SMP amount to obtain
     /// @return requiredOAS Required OAS amount to swap via LP (Vault handles WOAS conversion)
-    function _getRequiredOASFromLP(uint256 requiredSMP)
-        internal
-        returns (uint256 requiredOAS)
-    {
-        (IAsset[] memory assets, uint8 woasPoolIndex, uint8 smpPoolIndex) = _getPoolAssets(_woas);
-        // Note: Use WOAS for price queries as pool uses WOAS-SMP pair
+    function _getRequiredOASFromLP(uint256 requiredSMP) internal returns (uint256 requiredOAS) {
+        (IAsset[] memory assets, uint8 woasPoolIndex, uint8 smpPoolIndex) = _getPoolAssets();
+        
+        // Replace WOAS with ETH sentinel for clarity since this function is called
+        // when user wants to pay with OAS/POAS (not WOAS)
+        // Note: queryBatchSwap works with both WOAS address and ETH sentinel (address(0))
+        // since it's a simulation that doesn't involve actual token transfers,
+        // but we use ETH sentinel to make the intent clearer
+        assets[woasPoolIndex] = IAsset(address(0));
 
         // Create swap steps for GIVEN_OUT query
-        IVault.BatchSwapStep[] memory swaps = _createSwapSteps(requiredSMP, woasPoolIndex, smpPoolIndex);
+        IVault.BatchSwapStep[] memory swaps =
+            _createSwapSteps(requiredSMP, woasPoolIndex, smpPoolIndex);
         IVault.FundManagement memory funds = IVault.FundManagement({
             sender: address(this),
             fromInternalBalance: false,
@@ -757,7 +765,7 @@ contract SBTSale is ISBTSale, OwnableUpgradeable, ReentrancyGuardUpgradeable, EI
         providedSMP = (totalSMP * _smpLiquidityRatio) / MAX_BASIS_POINTS;
 
         // Setup pool interaction parameters
-        (IAsset[] memory assets, uint8 woasPoolIndex, uint8 smpPoolIndex) = _getPoolAssets(_woas);
+        (IAsset[] memory assets, uint8 woasPoolIndex, uint8 smpPoolIndex) = _getPoolAssets();
         uint256[] memory maxAmountsIn = new uint256[](2);
         maxAmountsIn[woasPoolIndex] = 0; // No WOAS (single-sided liquidity)
         maxAmountsIn[smpPoolIndex] = providedSMP; // Only SMP
@@ -817,7 +825,7 @@ contract SBTSale is ISBTSale, OwnableUpgradeable, ReentrancyGuardUpgradeable, EI
         if (address(_sbtContract) == address(0)) {
             revert InvalidAddress();
         }
-        
+
         uint256 length = tokenIds.length;
         for (uint256 i = 0; i < length; ++i) {
             _sbtContract.safeMint(to, tokenIds[i]);
