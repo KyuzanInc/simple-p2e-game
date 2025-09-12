@@ -3,7 +3,8 @@ pragma solidity >=0.8.0;
 pragma experimental ABIEncoderV2;
 
 import {Test} from "forge-std/Test.sol";
-import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import {TransparentUpgradeableProxy} from
+    "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IERC20} from "@balancer-labs/v2-interfaces/contracts/solidity-utils/openzeppelin/IERC20.sol";
 import {IVault} from "@balancer-labs/v2-interfaces/contracts/vault/IVault.sol";
@@ -42,7 +43,7 @@ contract SBTSaleTest is Test {
     address revenueRecipient;
     address sender;
     address owner;
-    
+
     // Signature verification test accounts
     uint256 signerPrivateKey = 0xA11CE;
     address signerAddress;
@@ -68,12 +69,18 @@ contract SBTSaleTest is Test {
     event Deposit(address indexed dst, uint256 wad);
     event Withdrawal(address indexed src, uint256 wad);
     event Paid(address indexed from, address indexed recipient, uint256 amount);
-    event Swap(bytes32 indexed poolId, IERC20 indexed tokenIn, IERC20 indexed tokenOut, uint256 amountIn, uint256 amountOut);
+    event Swap(
+        bytes32 indexed poolId,
+        IERC20 indexed tokenIn,
+        IERC20 indexed tokenOut,
+        uint256 amountIn,
+        uint256 amountOut
+    );
 
     function setUp() public {
         // Set initial block timestamp to a reasonable value
-        vm.warp(1000000);
-        
+        vm.warp(1_000_000);
+
         // Create test accounts
         deployer = makeAddr("deployer");
         lpRecipient = makeAddr("lpRecipient");
@@ -125,7 +132,8 @@ contract SBTSaleTest is Test {
 
         // Deploy as proxy and initialize
         bytes memory initData = abi.encodeWithSelector(SBTSale.initialize.selector, deployer);
-        p2eAddr = address(new TransparentUpgradeableProxy(address(implementation), deployer, initData));
+        p2eAddr =
+            address(new TransparentUpgradeableProxy(address(implementation), deployer, initData));
         p2e = ISBTSale(p2eAddr);
         woas = IERC20(address(_woas));
         poas = IPOAS(poasMinter.poas());
@@ -158,7 +166,7 @@ contract SBTSaleTest is Test {
 
         // Deploy single SBT contract
         sbtContract = new MockSBTSaleERC721("SoulboundToken", "SBT", p2eAddr);
-        
+
         // Set the SBT contract and signer in the sale contract (as deployer/owner)
         p2e.setSBTContract(sbtContract);
         p2e.setSigner(signerAddress); // Use test signer address for EIP-712 tests
@@ -187,7 +195,6 @@ contract SBTSaleTest is Test {
             vm.stopPrank();
         }
     }
-
 
     // =============================================================
     //                    CONFIGURATION TESTS
@@ -236,10 +243,10 @@ contract SBTSaleTest is Test {
     function test_setSigner() public {
         vm.startPrank(deployer);
         address newSigner = makeAddr("newSigner");
-        
+
         vm.expectEmit(p2eAddr);
         emit ISBTSale.SignerUpdated(signerAddress, newSigner);
-        
+
         p2e.setSigner(newSigner);
         assertEq(p2e.getSigner(), newSigner);
         vm.stopPrank();
@@ -248,7 +255,7 @@ contract SBTSaleTest is Test {
     function test_setSigner_unauthorized() public {
         address unauthorized = makeAddr("unauthorized");
         address newSigner = makeAddr("newSigner");
-        
+
         vm.startPrank(unauthorized);
         vm.expectRevert();
         p2e.setSigner(newSigner);
@@ -277,10 +284,10 @@ contract SBTSaleTest is Test {
     function test_setSBTContract() public {
         vm.startPrank(deployer);
         address newSBTContract = address(new MockSBTSaleERC721("NewSBT", "NSBT", p2eAddr));
-        
+
         vm.expectEmit(p2eAddr);
         emit ISBTSale.SBTContractUpdated(address(sbtContract), newSBTContract);
-        
+
         p2e.setSBTContract(ISBTSaleERC721(newSBTContract));
         assertEq(address(p2e.getSBTContract()), newSBTContract);
         vm.stopPrank();
@@ -289,7 +296,7 @@ contract SBTSaleTest is Test {
     function test_setSBTContract_unauthorized() public {
         address unauthorized = makeAddr("unauthorized");
         address newSBTContract = address(new MockSBTSaleERC721("NewSBT", "NSBT", p2eAddr));
-        
+
         vm.startPrank(unauthorized);
         vm.expectRevert();
         p2e.setSBTContract(ISBTSaleERC721(newSBTContract));
@@ -311,13 +318,13 @@ contract SBTSaleTest is Test {
         vm.startPrank(deployer);
         MockSBTSaleERC721 newSBTContract = new MockSBTSaleERC721("NewSBT", "NSBT", p2eAddr);
         ISBTSaleERC721 oldContract = p2e.getSBTContract();
-        
+
         vm.expectEmit(true, true, false, true);
         emit ISBTSale.SBTContractUpdated(address(oldContract), address(newSBTContract));
-        
+
         p2e.setSBTContract(newSBTContract);
         assertEq(address(p2e.getSBTContract()), address(newSBTContract));
-        
+
         p2e.setSBTContract(sbtContract);
         vm.stopPrank();
     }
@@ -326,15 +333,15 @@ contract SBTSaleTest is Test {
         vm.startPrank(deployer);
         MockSBTSaleERC721 newSBTContract = new MockSBTSaleERC721("NewSBT", "NSBT", p2eAddr);
         p2e.setSBTContract(newSBTContract);
-        
+
         address[] memory recipients = new address[](1);
         recipients[0] = makeAddr("testRecipient");
         uint256[] memory tokenIds = new uint256[](1);
         tokenIds[0] = 300;
-        
+
         p2e.mintByOwner(recipients, tokenIds);
         assertEq(newSBTContract.ownerOf(tokenIds[0]), recipients[0]);
-        
+
         p2e.setSBTContract(sbtContract);
         vm.stopPrank();
     }
@@ -344,21 +351,20 @@ contract SBTSaleTest is Test {
         ISBTSaleERC721 originalContract = p2e.getSBTContract();
         MockSBTSaleERC721 firstContract = new MockSBTSaleERC721("First", "F1", p2eAddr);
         MockSBTSaleERC721 secondContract = new MockSBTSaleERC721("Second", "S2", p2eAddr);
-        
+
         vm.expectEmit(true, true, false, true);
         emit ISBTSale.SBTContractUpdated(address(originalContract), address(firstContract));
         p2e.setSBTContract(firstContract);
         assertEq(address(p2e.getSBTContract()), address(firstContract));
-        
+
         vm.expectEmit(true, true, false, true);
         emit ISBTSale.SBTContractUpdated(address(firstContract), address(secondContract));
         p2e.setSBTContract(secondContract);
         assertEq(address(p2e.getSBTContract()), address(secondContract));
-        
+
         p2e.setSBTContract(originalContract);
         vm.stopPrank();
     }
-
 
     // =============================================================
     //                   INTEGRATION TESTS
@@ -370,21 +376,21 @@ contract SBTSaleTest is Test {
 
     function test_mintByOwner_singleRecipient() public {
         vm.startPrank(deployer);
-        
+
         address[] memory recipients = new address[](1);
         recipients[0] = makeAddr("recipient1");
         uint256[] memory tokenIds = new uint256[](1);
         tokenIds[0] = 200;
-        
+
         p2e.mintByOwner(recipients, tokenIds);
         assertEq(sbtContract.ownerOf(tokenIds[0]), recipients[0]);
-        
+
         vm.stopPrank();
     }
-    
+
     function test_mintByOwner_multipleRecipients() public {
         vm.startPrank(deployer);
-        
+
         address[] memory recipients = new address[](3);
         recipients[0] = makeAddr("recipient1");
         recipients[1] = makeAddr("recipient2");
@@ -393,46 +399,48 @@ contract SBTSaleTest is Test {
         tokenIds[0] = 201;
         tokenIds[1] = 202;
         tokenIds[2] = 203;
-        
+
         vm.expectEmit(true, false, false, true);
         emit ISBTSale.OwnerMinted(deployer, recipients, tokenIds);
-        
+
         p2e.mintByOwner(recipients, tokenIds);
-        
+
         for (uint256 i = 0; i < recipients.length; i++) {
             assertEq(sbtContract.ownerOf(tokenIds[i]), recipients[i]);
         }
-        
+
         vm.stopPrank();
     }
-    
+
     function test_mintByOwner_onlyOwner() public {
         address nonOwner = makeAddr("nonOwner");
         address[] memory recipients = new address[](1);
         recipients[0] = makeAddr("recipient1");
         uint256[] memory tokenIds = new uint256[](1);
         tokenIds[0] = 204;
-        
+
         vm.startPrank(nonOwner);
-        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, nonOwner));
+        vm.expectRevert(
+            abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, nonOwner)
+        );
         p2e.mintByOwner(recipients, tokenIds);
         vm.stopPrank();
     }
-    
+
     function test_mintByOwner_emptyArrays() public {
         vm.startPrank(deployer);
-        
+
         address[] memory recipients = new address[](0);
         uint256[] memory tokenIds = new uint256[](0);
-        
+
         vm.expectRevert(ISBTSale.NoItems.selector);
         p2e.mintByOwner(recipients, tokenIds);
         vm.stopPrank();
     }
-    
+
     function test_mintByOwner_arrayLengthMismatch() public {
         vm.startPrank(deployer);
-        
+
         address[] memory recipients = new address[](2);
         recipients[0] = makeAddr("recipient1");
         recipients[1] = makeAddr("recipient2");
@@ -440,22 +448,22 @@ contract SBTSaleTest is Test {
         tokenIds[0] = 205;
         tokenIds[1] = 206;
         tokenIds[2] = 207;
-        
+
         vm.expectRevert(ISBTSale.ArrayLengthMismatch.selector);
         p2e.mintByOwner(recipients, tokenIds);
         vm.stopPrank();
     }
-    
+
     function test_mintByOwner_zeroAddress() public {
         vm.startPrank(deployer);
-        
+
         address[] memory recipients = new address[](2);
         recipients[0] = makeAddr("recipient1");
         recipients[1] = address(0);
         uint256[] memory tokenIds = new uint256[](2);
         tokenIds[0] = 208;
         tokenIds[1] = 209;
-        
+
         vm.expectRevert(ISBTSale.InvalidAddress.selector);
         p2e.mintByOwner(recipients, tokenIds);
         vm.stopPrank();
@@ -477,122 +485,129 @@ contract SBTSaleTest is Test {
         assertEq(smpPrice, totalSMPPrice);
     }
 
-
     // =============================================================
     //                  EIP-712 SIGNATURE TESTS
     // =============================================================
-    
+
     function test_purchase_validSignature() public {
         vm.startPrank(sender);
-        
+
         uint256[] memory tokenIds = new uint256[](1);
         tokenIds[0] = 100;
         uint256 purchaseId = 995;
         uint256 deadline = block.timestamp + 1 hours;
         uint256 amount = p2e.queryPrice(1, nativeOAS);
-        
-        ISBTSale.PurchaseOrder memory order = _createPurchaseOrder(
-            purchaseId, sender, tokenIds, nativeOAS, amount, 300, deadline
-        );
+
+        ISBTSale.PurchaseOrder memory order =
+            _createPurchaseOrder(purchaseId, sender, tokenIds, nativeOAS, amount, 300, deadline);
         bytes memory signature = _signPurchaseOrder(order, signerPrivateKey);
-        
+
         vm.deal(sender, amount);
-        p2e.purchase{value: amount}(tokenIds, sender, nativeOAS, amount, 300, purchaseId, deadline, signature);
-        
+        p2e.purchase{value: amount}(
+            tokenIds, sender, nativeOAS, amount, 300, purchaseId, deadline, signature
+        );
+
         assertEq(sbtContract.ownerOf(tokenIds[0]), sender);
         vm.stopPrank();
     }
-    
+
     function test_purchase_invalidSignature() public {
         vm.startPrank(sender);
-        
+
         uint256[] memory tokenIds = new uint256[](1);
         tokenIds[0] = 101;
         uint256 purchaseId = 994;
         uint256 deadline = block.timestamp + 1 hours;
         uint256 amount = p2e.queryPrice(1, nativeOAS);
-        
+
         uint256 wrongPrivateKey = 0x1234;
-        ISBTSale.PurchaseOrder memory order = _createPurchaseOrder(
-            purchaseId, sender, tokenIds, nativeOAS, amount, 300, deadline
-        );
+        ISBTSale.PurchaseOrder memory order =
+            _createPurchaseOrder(purchaseId, sender, tokenIds, nativeOAS, amount, 300, deadline);
         bytes memory invalidSignature = _signPurchaseOrder(order, wrongPrivateKey);
-        
+
         vm.deal(sender, amount);
         vm.expectRevert(ISBTSale.InvalidSignature.selector);
-        p2e.purchase{value: amount}(tokenIds, sender, nativeOAS, amount, 300, purchaseId, deadline, invalidSignature);
-        
+        p2e.purchase{value: amount}(
+            tokenIds, sender, nativeOAS, amount, 300, purchaseId, deadline, invalidSignature
+        );
+
         vm.stopPrank();
     }
-    
+
     function test_purchase_expiredDeadline() public {
         vm.startPrank(sender);
-        
+
         uint256[] memory tokenIds = new uint256[](1);
         tokenIds[0] = 102;
         uint256 purchaseId = 993;
         uint256 pastDeadline = block.timestamp - 1;
         uint256 amount = p2e.queryPrice(1, nativeOAS);
-        
-        ISBTSale.PurchaseOrder memory order = _createPurchaseOrder(
-            purchaseId, sender, tokenIds, nativeOAS, amount, 300, pastDeadline
-        );
+
+        ISBTSale.PurchaseOrder memory order =
+            _createPurchaseOrder(purchaseId, sender, tokenIds, nativeOAS, amount, 300, pastDeadline);
         bytes memory signature = _signPurchaseOrder(order, signerPrivateKey);
-        
+
         vm.deal(sender, amount);
         vm.expectRevert(ISBTSale.ExpiredDeadline.selector);
-        p2e.purchase{value: amount}(tokenIds, sender, nativeOAS, amount, 300, purchaseId, pastDeadline, signature);
-        
+        p2e.purchase{value: amount}(
+            tokenIds, sender, nativeOAS, amount, 300, purchaseId, pastDeadline, signature
+        );
+
         vm.stopPrank();
     }
-    
+
     function test_purchase_duplicatePurchaseId() public {
         vm.startPrank(sender);
-        
+
         uint256[] memory tokenIds = new uint256[](1);
         tokenIds[0] = 103;
         uint256 purchaseId = 992;
         uint256 deadline = block.timestamp + 1 hours;
         uint256 amount = p2e.queryPrice(1, nativeOAS);
-        
-        ISBTSale.PurchaseOrder memory order = _createPurchaseOrder(
-            purchaseId, sender, tokenIds, nativeOAS, amount, 300, deadline
-        );
+
+        ISBTSale.PurchaseOrder memory order =
+            _createPurchaseOrder(purchaseId, sender, tokenIds, nativeOAS, amount, 300, deadline);
         bytes memory signature = _signPurchaseOrder(order, signerPrivateKey);
-        
+
         vm.deal(sender, amount * 2);
-        p2e.purchase{value: amount}(tokenIds, sender, nativeOAS, amount, 300, purchaseId, deadline, signature);
-        
+        p2e.purchase{value: amount}(
+            tokenIds, sender, nativeOAS, amount, 300, purchaseId, deadline, signature
+        );
+
         assertTrue(p2e.isUsedPurchaseId(purchaseId));
-        
+
         tokenIds[0] = 104;
         order = _createPurchaseOrder(purchaseId, sender, tokenIds, nativeOAS, amount, 300, deadline);
         signature = _signPurchaseOrder(order, signerPrivateKey);
-        
+
         vm.expectRevert(ISBTSale.PurchaseIdAlreadyUsed.selector);
-        p2e.purchase{value: amount}(tokenIds, sender, nativeOAS, amount, 300, purchaseId, deadline, signature);
-        
+        p2e.purchase{value: amount}(
+            tokenIds, sender, nativeOAS, amount, 300, purchaseId, deadline, signature
+        );
+
         vm.stopPrank();
     }
-    
+
     function test_purchase_buyerMismatch() public {
         address differentBuyer = makeAddr("differentBuyer");
-        
+
         uint256[] memory tokenIds = new uint256[](1);
         tokenIds[0] = 105;
         uint256 purchaseId = 991;
         uint256 deadline = block.timestamp + 1 hours;
         uint256 amount = p2e.queryPrice(1, nativeOAS);
-        
+
         ISBTSale.PurchaseOrder memory order = _createPurchaseOrder(
             purchaseId, differentBuyer, tokenIds, nativeOAS, amount, 300, deadline
         );
         bytes memory signature = _signPurchaseOrder(order, signerPrivateKey);
-        
+
         vm.startPrank(sender);
         vm.deal(sender, amount);
         vm.expectRevert(ISBTSale.BuyerMismatch.selector);
-        p2e.purchase{value: amount}(tokenIds, differentBuyer, nativeOAS, amount, 300, purchaseId, deadline, signature);
+        p2e.purchase{value: amount}(
+            tokenIds, differentBuyer, nativeOAS, amount, 300, purchaseId, deadline, signature
+        );
         vm.stopPrank();
     }
 
@@ -603,8 +618,10 @@ contract SBTSaleTest is Test {
         uint256 paymentAmount = actualAmount + 0.1 ether;
 
         uint256[] memory tokenIds = new uint256[](3);
-        tokenIds[0] = 1; tokenIds[1] = 2; tokenIds[2] = 3;
-        
+        tokenIds[0] = 1;
+        tokenIds[1] = 2;
+        tokenIds[2] = 3;
+
         ISBTSale.PurchaseOrder memory order = _createPurchaseOrder(
             1, sender, tokenIds, nativeOAS, paymentAmount, 300, block.timestamp + 1 hours
         );
@@ -618,7 +635,6 @@ contract SBTSaleTest is Test {
         assertLe(sender.balance, userInitialBalance - actualAmount);
     }
 
-
     function test_purchase_POAS() public {
         vm.startPrank(sender);
 
@@ -627,15 +643,24 @@ contract SBTSaleTest is Test {
         poas.approve(p2eAddr, paymentAmount);
 
         uint256[] memory tokenIds = new uint256[](3);
-        tokenIds[0] = 7; tokenIds[1] = 8; tokenIds[2] = 9;
-        
+        tokenIds[0] = 7;
+        tokenIds[1] = 8;
+        tokenIds[2] = 9;
+
         ISBTSale.PurchaseOrder memory order = _createPurchaseOrder(
             2, sender, tokenIds, address(poas), paymentAmount, 300, block.timestamp + 1 hours
         );
         bytes memory signature = _signPurchaseOrder(order, signerPrivateKey);
 
         p2e.purchase{gas: purchaseGasLimit}(
-            tokenIds, sender, address(poas), paymentAmount, 300, 2, block.timestamp + 1 hours, signature
+            tokenIds,
+            sender,
+            address(poas),
+            paymentAmount,
+            300,
+            2,
+            block.timestamp + 1 hours,
+            signature
         );
 
         _expect_minted_nfts(sender, tokenIds);
@@ -649,15 +674,24 @@ contract SBTSaleTest is Test {
         smp.approve(p2eAddr, actualAmount);
 
         uint256[] memory tokenIds = new uint256[](3);
-        tokenIds[0] = 16; tokenIds[1] = 17; tokenIds[2] = 18;
-        
+        tokenIds[0] = 16;
+        tokenIds[1] = 17;
+        tokenIds[2] = 18;
+
         ISBTSale.PurchaseOrder memory order = _createPurchaseOrder(
             5, sender, tokenIds, address(smp), actualAmount, 300, block.timestamp + 1 hours
         );
         bytes memory signature = _signPurchaseOrder(order, signerPrivateKey);
 
         p2e.purchase{gas: purchaseGasLimit}(
-            tokenIds, sender, address(smp), actualAmount, 300, 5, block.timestamp + 1 hours, signature
+            tokenIds,
+            sender,
+            address(smp),
+            actualAmount,
+            300,
+            5,
+            block.timestamp + 1 hours,
+            signature
         );
 
         _expect_minted_nfts(sender, tokenIds);
@@ -826,31 +860,40 @@ contract SBTSaleTest is Test {
         });
     }
 
-    function _signPurchaseOrder(
-        ISBTSale.PurchaseOrder memory order,
-        uint256 signerPrivateKey
-    ) internal view returns (bytes memory) {
-        bytes32 structHash = keccak256(abi.encode(
-            keccak256("PurchaseOrder(uint256 purchaseId,address buyer,uint256[] tokenIds,address paymentToken,uint256 amount,uint256 maxSlippageBps,uint256 deadline)"),
-            order.purchaseId,
-            order.buyer,
-            keccak256(abi.encode(order.tokenIds)),
-            order.paymentToken,
-            order.amount,
-            order.maxSlippageBps,
-            order.deadline
-        ));
+    function _signPurchaseOrder(ISBTSale.PurchaseOrder memory order, uint256 signerPrivateKey)
+        internal
+        view
+        returns (bytes memory)
+    {
+        bytes32 structHash = keccak256(
+            abi.encode(
+                keccak256(
+                    "PurchaseOrder(uint256 purchaseId,address buyer,uint256[] tokenIds,address paymentToken,uint256 amount,uint256 maxSlippageBps,uint256 deadline)"
+                ),
+                order.purchaseId,
+                order.buyer,
+                keccak256(abi.encode(order.tokenIds)),
+                order.paymentToken,
+                order.amount,
+                order.maxSlippageBps,
+                order.deadline
+            )
+        );
 
-        bytes32 domainSeparator = keccak256(abi.encode(
-            keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
-            keccak256(bytes("SBTSale")),
-            keccak256(bytes("1")),
-            block.chainid,
-            p2eAddr
-        ));
+        bytes32 domainSeparator = keccak256(
+            abi.encode(
+                keccak256(
+                    "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
+                ),
+                keccak256(bytes("SBTSale")),
+                keccak256(bytes("1")),
+                block.chainid,
+                p2eAddr
+            )
+        );
 
         bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
-        
+
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPrivateKey, digest);
         return abi.encodePacked(r, s, v);
     }

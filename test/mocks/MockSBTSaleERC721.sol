@@ -34,5 +34,4 @@ contract MockSBTSaleERC721 is ISBTSaleERC721, ERC721 {
         require(msg.sender == sbtSale, "Only SBTSale can mint");
         _mint(to, tokenId);
     }
-
 }

@@ -33,7 +33,6 @@ contract SoulboundToken is
     /// @dev Revert when attempting a prohibited transfer or approval
     error Soulbound();
 
-
     /// @notice Role identifier for accounts allowed to mint
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
 
@@ -45,7 +44,6 @@ contract SoulboundToken is
 
     /// @dev Token mint timestamp mapping
     mapping(uint256 => uint256) private _mintedAt;
-
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -95,7 +93,6 @@ contract SoulboundToken is
         _mintedAt[tokenId] = block.timestamp;
     }
 
-
     /// @notice Update base URI for token metadata
     function setBaseURI(string memory newBaseURI) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _baseTokenURI = newBaseURI;
@@ -120,7 +117,6 @@ contract SoulboundToken is
     function _baseURI() internal view override returns (string memory) {
         return _baseTokenURI;
     }
-
 
     /// @dev Override required by multiple inheritance
     function _update(address to, uint256 tokenId, address auth)
@@ -148,7 +144,6 @@ contract SoulboundToken is
     {
         return super.supportsInterface(interfaceId);
     }
-
 
     // ---------------------------------------------------------------------
     // Non-transferable overrides

@@ -84,7 +84,6 @@ contract SoulboundTokenTest is Test {
         sbt.safeMint(user, 1);
     }
 
-
     function test_tokenURI_and_baseURI_update() public {
         vm.prank(owner);
         sbt.safeMint(owner, 1);
@@ -132,7 +131,6 @@ contract SoulboundTokenTest is Test {
         );
         sbt.grantRole(MINTER_ROLE, minter);
     }
-
 
     function test_upgrade() public {
         // mint token id 1
