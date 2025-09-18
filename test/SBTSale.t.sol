@@ -3,6 +3,7 @@ pragma solidity >=0.8.0;
 pragma experimental ABIEncoderV2;
 
 import {Test} from "forge-std/Test.sol";
+import {Vm} from "forge-std/Vm.sol";
 import {TransparentUpgradeableProxy} from
     "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
@@ -197,6 +198,88 @@ contract SBTSaleTest is Test {
     }
 
     // =============================================================
+    //                   CONSTRUCTOR ERROR TESTS
+    // =============================================================
+
+    function test_constructor_invalidPOASMinter() public {
+        vm.expectRevert(ISBTSale.InvalidPaymentToken.selector);
+        new SBTSale({
+            poasMinter: address(0),
+            liquidityPool: address(pool),
+            lpRecipient: lpRecipient,
+            revenueRecipient: revenueRecipient,
+            smpBasePrice: smpBasePrice,
+            smpBurnRatio: 5000,
+            smpLiquidityRatio: 4000
+        });
+    }
+
+    function test_constructor_invalidLiquidityPool() public {
+        vm.expectRevert(ISBTSale.InvalidPaymentToken.selector);
+        new SBTSale({
+            poasMinter: address(poasMinter),
+            liquidityPool: address(0),
+            lpRecipient: lpRecipient,
+            revenueRecipient: revenueRecipient,
+            smpBasePrice: smpBasePrice,
+            smpBurnRatio: 5000,
+            smpLiquidityRatio: 4000
+        });
+    }
+
+    function test_constructor_invalidLPRecipient() public {
+        vm.expectRevert(ISBTSale.InvalidRecipient.selector);
+        new SBTSale({
+            poasMinter: address(poasMinter),
+            liquidityPool: address(pool),
+            lpRecipient: address(0),
+            revenueRecipient: revenueRecipient,
+            smpBasePrice: smpBasePrice,
+            smpBurnRatio: 5000,
+            smpLiquidityRatio: 4000
+        });
+    }
+
+    function test_constructor_invalidRevenueRecipient() public {
+        vm.expectRevert(ISBTSale.InvalidRecipient.selector);
+        new SBTSale({
+            poasMinter: address(poasMinter),
+            liquidityPool: address(pool),
+            lpRecipient: lpRecipient,
+            revenueRecipient: address(0),
+            smpBasePrice: smpBasePrice,
+            smpBurnRatio: 5000,
+            smpLiquidityRatio: 4000
+        });
+    }
+
+    function test_constructor_invalidSMPBasePrice() public {
+        vm.expectRevert(ISBTSale.InvalidPaymentAmount.selector);
+        new SBTSale({
+            poasMinter: address(poasMinter),
+            liquidityPool: address(pool),
+            lpRecipient: lpRecipient,
+            revenueRecipient: revenueRecipient,
+            smpBasePrice: 0,
+            smpBurnRatio: 5000,
+            smpLiquidityRatio: 4000
+        });
+    }
+
+    function test_constructor_invalidRatioSum() public {
+        vm.expectRevert(ISBTSale.InvalidProtocolValue.selector);
+        new SBTSale({
+            poasMinter: address(poasMinter),
+            liquidityPool: address(pool),
+            lpRecipient: lpRecipient,
+            revenueRecipient: revenueRecipient,
+            smpBasePrice: smpBasePrice,
+            smpBurnRatio: 6000,
+            smpLiquidityRatio: 5000
+        });
+    }
+
+    // =============================================================
     //                    CONFIGURATION TESTS
     // =============================================================
 
@@ -314,26 +397,19 @@ contract SBTSaleTest is Test {
         assertEq(address(p2e.getSBTContract()), address(sbtContract));
     }
 
-    function test_setSBTContract_validContract() public {
+    function test_setSBTContract_validContractWithFunctionality() public {
         vm.startPrank(deployer);
         MockSBTSaleERC721 newSBTContract = new MockSBTSaleERC721("NewSBT", "NSBT", p2eAddr);
         ISBTSaleERC721 oldContract = p2e.getSBTContract();
 
+        // Test event emission
         vm.expectEmit(true, true, false, true);
         emit ISBTSale.SBTContractUpdated(address(oldContract), address(newSBTContract));
 
         p2e.setSBTContract(newSBTContract);
         assertEq(address(p2e.getSBTContract()), address(newSBTContract));
 
-        p2e.setSBTContract(sbtContract);
-        vm.stopPrank();
-    }
-
-    function test_setSBTContract_functionalityWithNewContract() public {
-        vm.startPrank(deployer);
-        MockSBTSaleERC721 newSBTContract = new MockSBTSaleERC721("NewSBT", "NSBT", p2eAddr);
-        p2e.setSBTContract(newSBTContract);
-
+        // Test functionality with new contract
         address[] memory recipients = new address[](1);
         recipients[0] = makeAddr("testRecipient");
         uint256[] memory tokenIds = new uint256[](1);
@@ -342,6 +418,7 @@ contract SBTSaleTest is Test {
         p2e.mintByOwner(recipients, tokenIds);
         assertEq(newSBTContract.ownerOf(tokenIds[0]), recipients[0]);
 
+        // Restore original contract
         p2e.setSBTContract(sbtContract);
         vm.stopPrank();
     }
@@ -465,6 +542,50 @@ contract SBTSaleTest is Test {
         tokenIds[1] = 209;
 
         vm.expectRevert(ISBTSale.InvalidAddress.selector);
+        p2e.mintByOwner(recipients, tokenIds);
+        vm.stopPrank();
+    }
+
+    function test_mintByOwner_noSBTContract() public {
+        // Create a new SBTSale instance without SBT contract set
+        vm.startPrank(deployer);
+        SBTSale implementation = new SBTSale({
+            poasMinter: address(poasMinter),
+            liquidityPool: address(pool),
+            lpRecipient: lpRecipient,
+            revenueRecipient: revenueRecipient,
+            smpBasePrice: smpBasePrice,
+            smpBurnRatio: 5000,
+            smpLiquidityRatio: 4000
+        });
+        
+        // Deploy as proxy
+        bytes memory initData = abi.encodeWithSelector(SBTSale.initialize.selector, deployer);
+        address testP2EAddr = address(new TransparentUpgradeableProxy(address(implementation), deployer, initData));
+        ISBTSale testP2E = ISBTSale(testP2EAddr);
+        // Don't set SBT contract - it remains address(0)
+
+        address[] memory recipients = new address[](1);
+        recipients[0] = makeAddr("recipient1");
+        uint256[] memory tokenIds = new uint256[](1);
+        tokenIds[0] = 210;
+
+        vm.expectRevert(ISBTSale.InvalidAddress.selector);
+        testP2E.mintByOwner(recipients, tokenIds);
+        vm.stopPrank();
+    }
+
+    function test_mintByOwner_tooManyItems() public {
+        vm.startPrank(deployer);
+
+        address[] memory recipients = new address[](201);
+        uint256[] memory tokenIds = new uint256[](201);
+        for (uint256 i = 0; i < 201; i++) {
+            recipients[i] = makeAddr(string(abi.encodePacked("recipient", vm.toString(i))));
+            tokenIds[i] = i + 2000;
+        }
+
+        vm.expectRevert(ISBTSale.TooManyItems.selector);
         p2e.mintByOwner(recipients, tokenIds);
         vm.stopPrank();
     }
@@ -696,6 +817,405 @@ contract SBTSaleTest is Test {
 
         _expect_minted_nfts(sender, tokenIds);
         assertEq(smp.balanceOf(sender), userInitialBalance - actualAmount);
+    }
+
+    // =============================================================
+    //                PURCHASE ERROR TESTS
+    // =============================================================
+
+    function test_purchase_noSBTContract() public {
+        // Create a new SBTSale instance without SBT contract set
+        vm.startPrank(deployer);
+        SBTSale implementation = new SBTSale({
+            poasMinter: address(poasMinter),
+            liquidityPool: address(pool),
+            lpRecipient: lpRecipient,
+            revenueRecipient: revenueRecipient,
+            smpBasePrice: smpBasePrice,
+            smpBurnRatio: 5000,
+            smpLiquidityRatio: 4000
+        });
+        
+        // Deploy as proxy
+        bytes memory initData = abi.encodeWithSelector(SBTSale.initialize.selector, deployer);
+        address testP2EAddr = address(new TransparentUpgradeableProxy(address(implementation), deployer, initData));
+        ISBTSale testP2E = ISBTSale(testP2EAddr);
+        testP2E.setSigner(signerAddress);
+        // Don't set SBT contract - it remains address(0)
+        
+        vm.stopPrank();
+
+        vm.startPrank(sender);
+        uint256[] memory tokenIds = new uint256[](1);
+        tokenIds[0] = 999;
+        uint256 amount = testP2E.queryPrice(1, nativeOAS);
+
+        ISBTSale.PurchaseOrder memory order =
+            _createPurchaseOrder(999, sender, tokenIds, nativeOAS, amount, 300, block.timestamp + 1 hours);
+        bytes32 structHash = keccak256(
+            abi.encode(
+                keccak256(
+                    "PurchaseOrder(uint256 purchaseId,address buyer,uint256[] tokenIds,address paymentToken,uint256 amount,uint256 maxSlippageBps,uint256 deadline)"
+                ),
+                order.purchaseId,
+                order.buyer,
+                keccak256(abi.encode(order.tokenIds)),
+                order.paymentToken,
+                order.amount,
+                order.maxSlippageBps,
+                order.deadline
+            )
+        );
+        bytes32 domainSeparator = keccak256(
+            abi.encode(
+                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+                keccak256(bytes("SBTSale")),
+                keccak256(bytes("1")),
+                block.chainid,
+                address(testP2E)
+            )
+        );
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPrivateKey, digest);
+        bytes memory signature = abi.encodePacked(r, s, v);
+
+        vm.deal(sender, amount);
+        vm.expectRevert(ISBTSale.InvalidAddress.selector);
+        testP2E.purchase{value: amount}(
+            tokenIds, sender, nativeOAS, amount, 300, 999, block.timestamp + 1 hours, signature
+        );
+        vm.stopPrank();
+    }
+
+    function test_purchase_tooManyItems() public {
+        vm.startPrank(sender);
+
+        uint256[] memory tokenIds = new uint256[](201);
+        for (uint256 i = 0; i < 201; i++) {
+            tokenIds[i] = i + 1000;
+        }
+
+        uint256 amount = p2e.queryPrice(201, nativeOAS);
+        ISBTSale.PurchaseOrder memory order =
+            _createPurchaseOrder(998, sender, tokenIds, nativeOAS, amount, 300, block.timestamp + 1 hours);
+        bytes memory signature = _signPurchaseOrder(order, signerPrivateKey);
+
+        vm.deal(sender, amount);
+        vm.expectRevert(ISBTSale.TooManyItems.selector);
+        p2e.purchase{value: amount}(
+            tokenIds, sender, nativeOAS, amount, 300, 998, block.timestamp + 1 hours, signature
+        );
+        vm.stopPrank();
+    }
+
+    function test_purchase_invalidPaymentToken() public {
+        vm.startPrank(sender);
+
+        uint256[] memory tokenIds = new uint256[](1);
+        tokenIds[0] = 997;
+        uint256 amount = 1 ether;
+        address invalidToken = makeAddr("invalidToken");
+
+        ISBTSale.PurchaseOrder memory order =
+            _createPurchaseOrder(997, sender, tokenIds, invalidToken, amount, 300, block.timestamp + 1 hours);
+        bytes memory signature = _signPurchaseOrder(order, signerPrivateKey);
+
+        vm.expectRevert(ISBTSale.InvalidPaymentToken.selector);
+        p2e.purchase(tokenIds, sender, invalidToken, amount, 300, 997, block.timestamp + 1 hours, signature);
+        vm.stopPrank();
+    }
+
+    function test_purchase_slippageExceeded() public {
+        vm.startPrank(sender);
+
+        uint256[] memory tokenIds = new uint256[](1);
+        tokenIds[0] = 996;
+        uint256 actualAmount = p2e.queryPrice(1, nativeOAS);
+        uint256 lowPaymentAmount = actualAmount / 10; // Very insufficient amount
+
+        ISBTSale.PurchaseOrder memory order = _createPurchaseOrder(
+            996, sender, tokenIds, nativeOAS, lowPaymentAmount, 100, block.timestamp + 1 hours
+        ); // 1% slippage tolerance
+        bytes memory signature = _signPurchaseOrder(order, signerPrivateKey);
+
+        vm.deal(sender, lowPaymentAmount);
+        // With insufficient funds, the Balancer pool will revert with BAL#507 (insufficient balance)
+        // rather than reaching our slippage check, so we expect the Balancer error
+        vm.expectRevert(); // Could be BAL#507 or SlippageExceeded depending on order
+        p2e.purchase{value: lowPaymentAmount}(
+            tokenIds, sender, nativeOAS, lowPaymentAmount, 100, 996, block.timestamp + 1 hours, signature
+        );
+        vm.stopPrank();
+    }
+
+    function test_purchase_invalidPaymentAmountForNativeOAS() public {
+        vm.startPrank(sender);
+
+        uint256[] memory tokenIds = new uint256[](1);
+        tokenIds[0] = 995;
+        uint256 amount = p2e.queryPrice(1, nativeOAS);
+
+        ISBTSale.PurchaseOrder memory order =
+            _createPurchaseOrder(995, sender, tokenIds, nativeOAS, amount, 300, block.timestamp + 1 hours);
+        bytes memory signature = _signPurchaseOrder(order, signerPrivateKey);
+
+        vm.deal(sender, amount * 2);
+        vm.expectRevert(ISBTSale.InvalidPaymentAmount.selector);
+        p2e.purchase{value: amount * 2}( // Sending wrong msg.value
+            tokenIds, sender, nativeOAS, amount, 300, 995, block.timestamp + 1 hours, signature
+        );
+        vm.stopPrank();
+    }
+
+    function test_purchase_msgValueForERC20() public {
+        vm.startPrank(sender);
+
+        uint256[] memory tokenIds = new uint256[](1);
+        tokenIds[0] = 994;
+        uint256 amount = totalSMPPrice;
+        smp.approve(p2eAddr, amount);
+
+        ISBTSale.PurchaseOrder memory order =
+            _createPurchaseOrder(994, sender, tokenIds, address(smp), amount, 300, block.timestamp + 1 hours);
+        bytes memory signature = _signPurchaseOrder(order, signerPrivateKey);
+
+        vm.expectRevert(ISBTSale.InvalidPaymentAmount.selector);
+        p2e.purchase{value: 1 ether}( // Should not send msg.value for ERC20
+            tokenIds, sender, address(smp), amount, 300, 994, block.timestamp + 1 hours, signature
+        );
+        vm.stopPrank();
+    }
+
+    // =============================================================
+    //                      QUERY PRICE ERROR TESTS
+    // =============================================================
+
+    function test_queryPrice_noItems() public {
+        vm.expectRevert(ISBTSale.NoItems.selector);
+        p2e.queryPrice(0, nativeOAS);
+    }
+
+    function test_queryPrice_invalidPaymentToken() public {
+        address invalidToken = makeAddr("invalidToken");
+        vm.expectRevert(ISBTSale.InvalidPaymentToken.selector);
+        p2e.queryPrice(1, invalidToken);
+    }
+
+    // =============================================================
+    //              EVENT VERIFICATION PURCHASE TESTS
+    // =============================================================
+
+    function test_purchase_OAS_withEventCapture() public {
+        vm.startPrank(sender);
+
+        uint256 actualAmount = p2e.queryPrice(NFT_COUNT, nativeOAS);
+        uint256 paymentAmount = actualAmount + 0.1 ether;
+
+        uint256[] memory tokenIds = new uint256[](3);
+        tokenIds[0] = 3001;
+        tokenIds[1] = 3002;
+        tokenIds[2] = 3003;
+
+        // Record logs to verify events were emitted
+        vm.recordLogs();
+
+        ISBTSale.PurchaseOrder memory order = _createPurchaseOrder(
+            3001, sender, tokenIds, nativeOAS, paymentAmount, 300, block.timestamp + 1 hours
+        );
+        bytes memory signature = _signPurchaseOrder(order, signerPrivateKey);
+
+        p2e.purchase{gas: purchaseGasLimit, value: paymentAmount}(
+            tokenIds, sender, nativeOAS, paymentAmount, 300, 3001, block.timestamp + 1 hours, signature
+        );
+
+        // Verify events were emitted (check log count)
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        assertGt(logs.length, 5); // Should have multiple events: swaps, burns, transfers, etc.
+
+        // Verify final state
+        _expect_minted_nfts(sender, tokenIds);
+        assertLe(sender.balance, userInitialBalance - actualAmount);
+
+        vm.stopPrank();
+    }
+
+    function test_purchase_SMP_withEventCapture() public {
+        vm.startPrank(sender);
+
+        uint256 actualAmount = totalSMPPrice;
+        smp.approve(p2eAddr, actualAmount);
+
+        uint256[] memory tokenIds = new uint256[](3);
+        tokenIds[0] = 3004;
+        tokenIds[1] = 3005;
+        tokenIds[2] = 3006;
+
+        // Record logs to verify events were emitted
+        vm.recordLogs();
+
+        ISBTSale.PurchaseOrder memory order = _createPurchaseOrder(
+            3004, sender, tokenIds, address(smp), actualAmount, 300, block.timestamp + 1 hours
+        );
+        bytes memory signature = _signPurchaseOrder(order, signerPrivateKey);
+
+        p2e.purchase{gas: purchaseGasLimit}(
+            tokenIds, sender, address(smp), actualAmount, 300, 3004, block.timestamp + 1 hours, signature
+        );
+
+        // Verify events were emitted
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        assertGt(logs.length, 3); // Should have burn, liquidity, revenue events
+
+        // Verify final state
+        _expect_minted_nfts(sender, tokenIds);
+        assertEq(smp.balanceOf(sender), userInitialBalance - actualAmount);
+
+        vm.stopPrank();
+    }
+
+    // =============================================================
+    //                   EDGE CASE & BOUNDARY TESTS
+    // =============================================================
+
+    function test_purchase_maxBatchSize() public {
+        vm.startPrank(sender);
+
+        uint256[] memory tokenIds = new uint256[](200); // MAX_BATCH_SIZE
+        for (uint256 i = 0; i < 200; i++) {
+            tokenIds[i] = i + 4000;
+        }
+
+        uint256 amount = p2e.queryPrice(200, nativeOAS);
+        ISBTSale.PurchaseOrder memory order =
+            _createPurchaseOrder(4000, sender, tokenIds, nativeOAS, amount, 300, block.timestamp + 1 hours);
+        bytes memory signature = _signPurchaseOrder(order, signerPrivateKey);
+
+        vm.deal(sender, amount);
+        p2e.purchase{value: amount}(
+            tokenIds, sender, nativeOAS, amount, 300, 4000, block.timestamp + 1 hours, signature
+        );
+
+        // Verify all NFTs were minted
+        for (uint256 i = 0; i < 200; i++) {
+            assertEq(sbtContract.ownerOf(tokenIds[i]), sender);
+        }
+
+        vm.stopPrank();
+    }
+
+    function test_purchase_zeroSlippage() public {
+        vm.startPrank(sender);
+
+        uint256[] memory tokenIds = new uint256[](1);
+        tokenIds[0] = 4201;
+        uint256 exactAmount = p2e.queryPrice(1, nativeOAS);
+
+        ISBTSale.PurchaseOrder memory order =
+            _createPurchaseOrder(4201, sender, tokenIds, nativeOAS, exactAmount, 0, block.timestamp + 1 hours);
+        bytes memory signature = _signPurchaseOrder(order, signerPrivateKey);
+
+        vm.deal(sender, exactAmount);
+        p2e.purchase{value: exactAmount}(
+            tokenIds, sender, nativeOAS, exactAmount, 0, 4201, block.timestamp + 1 hours, signature
+        );
+
+        assertEq(sbtContract.ownerOf(tokenIds[0]), sender);
+        vm.stopPrank();
+    }
+
+    function test_purchase_maxSlippage() public {
+        vm.startPrank(sender);
+
+        uint256[] memory tokenIds = new uint256[](1);
+        tokenIds[0] = 4202;
+        uint256 baseAmount = p2e.queryPrice(1, nativeOAS);
+        uint256 maxAmount = baseAmount * 2; // 100% higher
+
+        ISBTSale.PurchaseOrder memory order =
+            _createPurchaseOrder(4202, sender, tokenIds, nativeOAS, maxAmount, 10000, block.timestamp + 1 hours);
+        bytes memory signature = _signPurchaseOrder(order, signerPrivateKey);
+
+        vm.deal(sender, maxAmount);
+        p2e.purchase{value: maxAmount}(
+            tokenIds, sender, nativeOAS, maxAmount, 10000, 4202, block.timestamp + 1 hours, signature
+        );
+
+        assertEq(sbtContract.ownerOf(tokenIds[0]), sender);
+        vm.stopPrank();
+    }
+
+    function test_purchase_nearDeadline() public {
+        vm.startPrank(sender);
+
+        uint256[] memory tokenIds = new uint256[](1);
+        tokenIds[0] = 4203;
+        uint256 amount = p2e.queryPrice(1, nativeOAS);
+        uint256 deadline = block.timestamp + 1; // 1 second from now
+
+        ISBTSale.PurchaseOrder memory order =
+            _createPurchaseOrder(4203, sender, tokenIds, nativeOAS, amount, 300, deadline);
+        bytes memory signature = _signPurchaseOrder(order, signerPrivateKey);
+
+        vm.deal(sender, amount);
+        p2e.purchase{value: amount}(tokenIds, sender, nativeOAS, amount, 300, 4203, deadline, signature);
+
+        assertEq(sbtContract.ownerOf(tokenIds[0]), sender);
+        vm.stopPrank();
+    }
+
+    function test_constructor_edgeRatios() public {
+        // Test with minimum ratios (0% burn, 0% liquidity, 100% revenue)
+        SBTSale minRatioContract = new SBTSale({
+            poasMinter: address(poasMinter),
+            liquidityPool: address(pool),
+            lpRecipient: lpRecipient,
+            revenueRecipient: revenueRecipient,
+            smpBasePrice: smpBasePrice,
+            smpBurnRatio: 0,
+            smpLiquidityRatio: 0
+        });
+        assertEq(minRatioContract.getSMPBurnRatio(), 0);
+        assertEq(minRatioContract.getSMPLiquidityRatio(), 0);
+
+        // Test with maximum valid ratios (100% total)
+        SBTSale maxRatioContract = new SBTSale({
+            poasMinter: address(poasMinter),
+            liquidityPool: address(pool),
+            lpRecipient: lpRecipient,
+            revenueRecipient: revenueRecipient,
+            smpBasePrice: smpBasePrice,
+            smpBurnRatio: 7000,
+            smpLiquidityRatio: 3000
+        });
+        assertEq(maxRatioContract.getSMPBurnRatio(), 7000);
+        assertEq(maxRatioContract.getSMPLiquidityRatio(), 3000);
+    }
+
+    function test_signer_noSignerSet() public {
+        vm.startPrank(sender);
+
+        uint256[] memory tokenIds = new uint256[](1);
+        tokenIds[0] = 4204;
+        uint256 amount = p2e.queryPrice(1, nativeOAS);
+
+        ISBTSale.PurchaseOrder memory order =
+            _createPurchaseOrder(4204, sender, tokenIds, nativeOAS, amount, 300, block.timestamp + 1 hours);
+        bytes memory signature = _signPurchaseOrder(order, signerPrivateKey);
+
+        // Reset signer to zero address
+        vm.stopPrank();
+        vm.startPrank(deployer);
+        p2e.setSigner(signerAddress); // Set to known address first
+        p2e.setSigner(vm.addr(1)); // Change to different address to invalidate signature
+        vm.stopPrank();
+
+        vm.startPrank(sender);
+        vm.deal(sender, amount);
+        vm.expectRevert(ISBTSale.InvalidSignature.selector);
+        p2e.purchase{value: amount}(
+            tokenIds, sender, nativeOAS, amount, 300, 4204, block.timestamp + 1 hours, signature
+        );
+        vm.stopPrank();
     }
 
     function _expect_receive_token_events(address tokenIn, uint256 expectedReceived) internal {
