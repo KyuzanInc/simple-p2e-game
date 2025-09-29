@@ -71,6 +71,9 @@ contract SBTSale is ISBTSale, OwnableUpgradeable, ReentrancyGuardUpgradeable, EI
     bytes32 private constant PURCHASE_ORDER_TYPEHASH = keccak256(
         "PurchaseOrder(uint256 purchaseId,address buyer,uint256[] tokenIds,address paymentToken,uint256 amount,uint256 maxSlippageBps,uint256 deadline)"
     );
+    bytes32 private constant FREE_PURCHASE_ORDER_TYPEHASH = keccak256(
+        "FreePurchaseOrder(uint256 purchaseId,address buyer,uint256[] tokenIds,uint256 deadline)"
+    );
 
     // Immutable configuration
     address private immutable _vault;
@@ -407,6 +410,64 @@ contract SBTSale is ISBTSale, OwnableUpgradeable, ReentrancyGuardUpgradeable, EI
         );
     }
 
+    /// @inheritdoc ISBTSale
+    function freePurchase(
+        uint256[] calldata tokenIds,
+        address buyer,
+        uint256 purchaseId,
+        uint256 deadline,
+        bytes calldata signature
+    ) external nonReentrant {
+        if (tokenIds.length == 0) {
+            revert NoItems();
+        }
+        if (tokenIds.length > MAX_BATCH_SIZE) {
+            revert TooManyItems();
+        }
+        if (address(_sbtContract) == address(0)) {
+            revert InvalidAddress();
+        }
+        if (msg.sender != buyer) {
+            revert BuyerMismatch();
+        }
+        if (usedPurchaseIds[purchaseId]) {
+            revert PurchaseIdAlreadyUsed();
+        }
+        if (block.timestamp > deadline) {
+            revert ExpiredDeadline();
+        }
+
+        FreePurchaseOrder memory order = FreePurchaseOrder({
+            purchaseId: purchaseId,
+            buyer: buyer,
+            tokenIds: tokenIds,
+            deadline: deadline
+        });
+
+        if (!_verifyFreePurchaseOrder(order, signature)) {
+            revert InvalidSignature();
+        }
+
+        usedPurchaseIds[purchaseId] = true;
+
+        _mintNFTs(msg.sender, tokenIds);
+
+        emit Purchased(
+            msg.sender,
+            tokenIds,
+            NATIVE_OAS,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            _revenueRecipient,
+            _lpRecipient,
+            purchaseId
+        );
+    }
+
     /// @dev Check if the address is zero
     function _isZeroAddress(address addr) internal pure returns (bool) {
         return addr == address(0);
@@ -456,6 +517,22 @@ contract SBTSale is ISBTSale, OwnableUpgradeable, ReentrancyGuardUpgradeable, EI
         );
     }
 
+    function _hashFreePurchaseOrder(FreePurchaseOrder memory order) internal view returns (bytes32) {
+        bytes32 tokenIdsHash = keccak256(abi.encode(order.tokenIds));
+
+        return _hashTypedDataV4(
+            keccak256(
+                abi.encode(
+                    FREE_PURCHASE_ORDER_TYPEHASH,
+                    order.purchaseId,
+                    order.buyer,
+                    tokenIdsHash,
+                    order.deadline
+                )
+            )
+        );
+    }
+
     /// @dev Verify purchase order signature
     function _verifyPurchaseOrder(PurchaseOrder memory order, bytes calldata signature)
         internal
@@ -467,6 +544,19 @@ contract SBTSale is ISBTSale, OwnableUpgradeable, ReentrancyGuardUpgradeable, EI
         }
 
         bytes32 digest = _hashPurchaseOrder(order);
+        return _signer.isValidSignatureNow(digest, signature);
+    }
+
+    function _verifyFreePurchaseOrder(FreePurchaseOrder memory order, bytes calldata signature)
+        internal
+        view
+        returns (bool)
+    {
+        if (_signer == address(0)) {
+            return false;
+        }
+
+        bytes32 digest = _hashFreePurchaseOrder(order);
         return _signer.isValidSignatureNow(digest, signature);
     }
 
