@@ -1163,6 +1163,189 @@ contract SBTSaleTest is Test {
         vm.stopPrank();
     }
 
+    // =============================================================
+    //                   FREE PURCHASE TESTS
+    // =============================================================
+
+    function test_freePurchase_validSignature() public {
+        vm.startPrank(sender);
+
+        uint256[] memory tokenIds = new uint256[](2);
+        tokenIds[0] = 5201;
+        tokenIds[1] = 5202;
+        uint256 purchaseId = 5201;
+        uint256 deadline = block.timestamp + 1 hours;
+
+        ISBTSale.FreePurchaseOrder memory order =
+            _createFreePurchaseOrder(purchaseId, sender, tokenIds, deadline);
+        bytes memory signature = _signFreePurchaseOrder(order, signerPrivateKey);
+
+        _expect_free_purchased_event(sender, tokenIds, purchaseId);
+        p2e.freePurchase(tokenIds, sender, purchaseId, deadline, signature);
+
+        _expect_minted_nfts(sender, tokenIds);
+        assertTrue(p2e.isUsedPurchaseId(purchaseId));
+        vm.stopPrank();
+    }
+
+    function test_freePurchase_invalidSignature() public {
+        vm.startPrank(sender);
+
+        uint256[] memory tokenIds = new uint256[](1);
+        tokenIds[0] = 5301;
+        uint256 purchaseId = 5301;
+        uint256 deadline = block.timestamp + 1 hours;
+
+        ISBTSale.FreePurchaseOrder memory order =
+            _createFreePurchaseOrder(purchaseId, sender, tokenIds, deadline);
+        uint256 wrongPrivateKey = 0x1234;
+        bytes memory invalidSignature = _signFreePurchaseOrder(order, wrongPrivateKey);
+
+        vm.expectRevert(ISBTSale.InvalidSignature.selector);
+        p2e.freePurchase(tokenIds, sender, purchaseId, deadline, invalidSignature);
+        vm.stopPrank();
+    }
+
+    function test_freePurchase_expiredDeadline() public {
+        vm.startPrank(sender);
+
+        uint256[] memory tokenIds = new uint256[](1);
+        tokenIds[0] = 5401;
+        uint256 purchaseId = 5401;
+        uint256 deadline = block.timestamp - 1; // Already expired
+
+        ISBTSale.FreePurchaseOrder memory order =
+            _createFreePurchaseOrder(purchaseId, sender, tokenIds, deadline);
+        bytes memory signature = _signFreePurchaseOrder(order, signerPrivateKey);
+
+        vm.expectRevert(ISBTSale.ExpiredDeadline.selector);
+        p2e.freePurchase(tokenIds, sender, purchaseId, deadline, signature);
+        vm.stopPrank();
+    }
+
+    function test_freePurchase_duplicatePurchaseId() public {
+        vm.startPrank(sender);
+
+        uint256[] memory tokenIds = new uint256[](1);
+        tokenIds[0] = 5501;
+        uint256 purchaseId = 5501;
+        uint256 deadline = block.timestamp + 1 hours;
+
+        ISBTSale.FreePurchaseOrder memory order =
+            _createFreePurchaseOrder(purchaseId, sender, tokenIds, deadline);
+        bytes memory signature = _signFreePurchaseOrder(order, signerPrivateKey);
+
+        _expect_free_purchased_event(sender, tokenIds, purchaseId);
+        p2e.freePurchase(tokenIds, sender, purchaseId, deadline, signature);
+
+        assertTrue(p2e.isUsedPurchaseId(purchaseId));
+
+        vm.expectRevert(ISBTSale.PurchaseIdAlreadyUsed.selector);
+        p2e.freePurchase(tokenIds, sender, purchaseId, deadline, signature);
+        vm.stopPrank();
+    }
+
+    function test_freePurchase_buyerMismatch() public {
+        vm.startPrank(sender);
+
+        uint256[] memory tokenIds = new uint256[](1);
+        tokenIds[0] = 5601;
+        uint256 purchaseId = 5601;
+        uint256 deadline = block.timestamp + 1 hours;
+        address differentBuyer = makeAddr("differentBuyer");
+
+        ISBTSale.FreePurchaseOrder memory order =
+            _createFreePurchaseOrder(purchaseId, differentBuyer, tokenIds, deadline);
+        bytes memory signature = _signFreePurchaseOrder(order, signerPrivateKey);
+
+        vm.expectRevert(ISBTSale.BuyerMismatch.selector);
+        p2e.freePurchase(tokenIds, differentBuyer, purchaseId, deadline, signature);
+        vm.stopPrank();
+    }
+
+    function test_freePurchase_tooManyItems() public {
+        vm.startPrank(sender);
+
+        uint256[] memory tokenIds = new uint256[](201);
+        for (uint256 i = 0; i < 201; i++) {
+            tokenIds[i] = 6000 + i;
+        }
+
+        uint256 purchaseId = 5701;
+        uint256 deadline = block.timestamp + 1 hours;
+
+        ISBTSale.FreePurchaseOrder memory order =
+            _createFreePurchaseOrder(purchaseId, sender, tokenIds, deadline);
+        bytes memory signature = _signFreePurchaseOrder(order, signerPrivateKey);
+
+        vm.expectRevert(ISBTSale.TooManyItems.selector);
+        p2e.freePurchase(tokenIds, sender, purchaseId, deadline, signature);
+        vm.stopPrank();
+    }
+
+    function test_freePurchase_noSBTContract() public {
+        vm.startPrank(deployer);
+        SBTSale implementation = new SBTSale({
+            poasMinter: address(poasMinter),
+            liquidityPool: address(pool),
+            lpRecipient: lpRecipient,
+            revenueRecipient: revenueRecipient,
+            smpBasePrice: smpBasePrice,
+            smpBurnRatio: 5000,
+            smpLiquidityRatio: 4000
+        });
+
+        bytes memory initData = abi.encodeWithSelector(SBTSale.initialize.selector, deployer);
+        address testP2EAddr = address(new TransparentUpgradeableProxy(address(implementation), deployer, initData));
+        ISBTSale testP2E = ISBTSale(testP2EAddr);
+        testP2E.setSigner(signerAddress);
+        vm.stopPrank();
+
+        vm.startPrank(sender);
+
+        uint256[] memory tokenIds = new uint256[](1);
+        tokenIds[0] = 5801;
+        uint256 purchaseId = 5801;
+        uint256 deadline = block.timestamp + 1 hours;
+
+        ISBTSale.FreePurchaseOrder memory order = ISBTSale.FreePurchaseOrder({
+            purchaseId: purchaseId,
+            buyer: sender,
+            tokenIds: tokenIds,
+            deadline: deadline
+        });
+
+        bytes32 structHash = keccak256(
+            abi.encode(
+                keccak256(
+                    "FreePurchaseOrder(uint256 purchaseId,address buyer,uint256[] tokenIds,uint256 deadline)"
+                ),
+                order.purchaseId,
+                order.buyer,
+                keccak256(abi.encode(order.tokenIds)),
+                order.deadline
+            )
+        );
+        bytes32 domainSeparator = keccak256(
+            abi.encode(
+                keccak256(
+                    "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
+                ),
+                keccak256(bytes("SBTSale")),
+                keccak256(bytes("1")),
+                block.chainid,
+                testP2EAddr
+            )
+        );
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPrivateKey, digest);
+        bytes memory signature = abi.encodePacked(r, s, v);
+
+        vm.expectRevert(ISBTSale.InvalidAddress.selector);
+        testP2E.freePurchase(tokenIds, sender, purchaseId, deadline, signature);
+        vm.stopPrank();
+    }
+
     function test_constructor_edgeRatios() public {
         // Test with minimum ratios (0% burn, 0% liquidity, 100% revenue)
         SBTSale minRatioContract = new SBTSale({
@@ -1360,6 +1543,24 @@ contract SBTSaleTest is Test {
         }
     }
 
+    function _expect_free_purchased_event(address buyer, uint256[] memory tokenIds, uint256 purchaseId) internal {
+        vm.expectEmit(p2eAddr);
+        emit ISBTSale.Purchased(
+            buyer,
+            tokenIds,
+            address(0),
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            revenueRecipient,
+            lpRecipient,
+            purchaseId
+        );
+    }
+
     function _createPurchaseOrder(
         uint256 purchaseId,
         address buyer,
@@ -1396,6 +1597,55 @@ contract SBTSaleTest is Test {
                 order.paymentToken,
                 order.amount,
                 order.maxSlippageBps,
+                order.deadline
+            )
+        );
+
+        bytes32 domainSeparator = keccak256(
+            abi.encode(
+                keccak256(
+                    "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
+                ),
+                keccak256(bytes("SBTSale")),
+                keccak256(bytes("1")),
+                block.chainid,
+                p2eAddr
+            )
+        );
+
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPrivateKey, digest);
+        return abi.encodePacked(r, s, v);
+    }
+
+    function _createFreePurchaseOrder(
+        uint256 purchaseId,
+        address buyer,
+        uint256[] memory tokenIds,
+        uint256 deadline
+    ) internal pure returns (ISBTSale.FreePurchaseOrder memory) {
+        return ISBTSale.FreePurchaseOrder({
+            purchaseId: purchaseId,
+            buyer: buyer,
+            tokenIds: tokenIds,
+            deadline: deadline
+        });
+    }
+
+    function _signFreePurchaseOrder(ISBTSale.FreePurchaseOrder memory order, uint256 signerPrivateKey)
+        internal
+        view
+        returns (bytes memory)
+    {
+        bytes32 structHash = keccak256(
+            abi.encode(
+                keccak256(
+                    "FreePurchaseOrder(uint256 purchaseId,address buyer,uint256[] tokenIds,uint256 deadline)"
+                ),
+                order.purchaseId,
+                order.buyer,
+                keccak256(abi.encode(order.tokenIds)),
                 order.deadline
             )
         );
