@@ -20,7 +20,7 @@ import {ISBTSaleERC721} from "./ISBTSaleERC721.sol";
  *
  */
 interface ISBTSale {
-    // Signature verification structure for EIP-712
+    // Signature verification structure for paid purchase EIP-712
     struct PurchaseOrder {
         uint256 purchaseId; // Globally unique purchase ID
         address buyer;
@@ -28,6 +28,14 @@ interface ISBTSale {
         address paymentToken;
         uint256 amount;
         uint256 maxSlippageBps; // Maximum slippage in basis points (1 BPS = 0.01%)
+        uint256 deadline;
+    }
+
+    // Signature verification structure for free purchase EIP-712
+    struct FreePurchaseOrder {
+        uint256 purchaseId; // Globally unique purchase ID
+        address buyer;
+        uint256[] tokenIds;
         uint256 deadline;
     }
 
@@ -159,6 +167,26 @@ interface ISBTSale {
         uint256 deadline,
         bytes calldata signature
     ) external payable;
+
+    /**
+     * @dev Purchase SBTs without payment using server-signed authorization
+     *
+     * This method allows minting SBTs for free while still requiring a
+     * server-issued signature for replay protection and access control.
+     *
+     * @param tokenIds Array of token IDs to mint from the configured SBT contract
+     * @param buyer Address of the authorized buyer (must match msg.sender)
+     * @param purchaseId Globally unique purchase ID for replay protection
+     * @param deadline Signature expiration timestamp
+     * @param signature Server signature for the free purchase order
+     */
+    function freePurchase(
+        uint256[] calldata tokenIds,
+        address buyer,
+        uint256 purchaseId,
+        uint256 deadline,
+        bytes calldata signature
+    ) external;
 
     /**
      * @dev Mint SBTs directly as contract owner
