@@ -234,12 +234,10 @@ contract SBTSale is ISBTSale, Ownable2StepUpgradeable, ReentrancyGuardUpgradeabl
             revert InvalidAddress();
         }
 
-        // Verify contract implements required interface using ERC-165
-        // Check for ERC721 interface support (0x80ac58cd) which ISBTSaleERC721 extends
-        try IERC165(address(newSBTContract)).supportsInterface(0x80ac58cd) returns (
-            bool supportsERC721
-        ) {
-            if (!supportsERC721) {
+        // Verify contract implements required interfaces using ERC-165
+        try IERC165(address(newSBTContract)).supportsInterface(type(ISBTSaleERC721).interfaceId)
+        returns (bool supportsISBTSaleERC721) {
+            if (!supportsISBTSaleERC721) {
                 revert InvalidAddress();
             }
         } catch {

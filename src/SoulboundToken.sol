@@ -142,7 +142,7 @@ contract SoulboundToken is
         override(ERC721Upgradeable, ERC721EnumerableUpgradeable, AccessControlUpgradeable, IERC165)
         returns (bool)
     {
-        return super.supportsInterface(interfaceId);
+        return interfaceId == type(ISBTSaleERC721).interfaceId || super.supportsInterface(interfaceId);
     }
 
     // ---------------------------------------------------------------------

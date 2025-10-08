@@ -13,6 +13,7 @@ import {ITransparentUpgradeableProxy} from
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 import {SoulboundToken} from "../src/SoulboundToken.sol";
+import {ISBTSaleERC721} from "../src/interfaces/ISBTSaleERC721.sol";
 
 contract SoulboundTokenTest is Test {
     SoulboundToken sbt;
@@ -110,6 +111,7 @@ contract SoulboundTokenTest is Test {
     function test_supportsInterface() public view {
         assertTrue(sbt.supportsInterface(type(IAccessControl).interfaceId));
         assertTrue(sbt.supportsInterface(type(IERC721).interfaceId));
+        assertTrue(sbt.supportsInterface(type(ISBTSaleERC721).interfaceId));
         assertFalse(sbt.supportsInterface(0x12345678));
     }
 

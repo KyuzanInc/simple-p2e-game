@@ -443,6 +443,17 @@ contract SBTSaleTest is Test {
         vm.stopPrank();
     }
 
+    function test_setSBTContract_invalidInterface() public {
+        vm.startPrank(deployer);
+
+        // Try to set a contract that doesn't implement ISBTSaleERC721
+        // WOAS doesn't implement ISBTSaleERC721, so it should fail
+        vm.expectRevert(ISBTSale.InvalidAddress.selector);
+        p2e.setSBTContract(ISBTSaleERC721(address(woas)));
+
+        vm.stopPrank();
+    }
+
     // =============================================================
     //                   INTEGRATION TESTS
     // =============================================================

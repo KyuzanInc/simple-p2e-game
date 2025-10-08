@@ -2,6 +2,7 @@
 pragma solidity >=0.8.0;
 
 import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import {ISBTSaleERC721} from "../../src/interfaces/ISBTSaleERC721.sol";
 
 /**
@@ -33,5 +34,14 @@ contract MockSBTSaleERC721 is ISBTSaleERC721, ERC721 {
     function safeMint(address to, uint256 tokenId) external {
         require(msg.sender == sbtSale, "Only SBTSale can mint");
         _mint(to, tokenId);
+    }
+
+    /**
+     * @notice Check if contract supports a given interface
+     * @param interfaceId Interface ID to check
+     * @return bool True if interface is supported
+     */
+    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC721, IERC165) returns (bool) {
+        return interfaceId == type(ISBTSaleERC721).interfaceId || super.supportsInterface(interfaceId);
     }
 }
