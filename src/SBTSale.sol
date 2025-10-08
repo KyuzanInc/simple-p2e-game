@@ -6,7 +6,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ERC20Burnable} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
-import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import {ReentrancyGuardUpgradeable} from
     "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import {EIP712Upgradeable} from
@@ -34,7 +34,7 @@ import {IPOASMinter} from "./interfaces/IPOASMinter.sol";
  * @dev Contract for selling SBTs using multiple payment tokens. Handles SMP burning,
  *      liquidity provision and revenue distribution.
  */
-contract SBTSale is ISBTSale, OwnableUpgradeable, ReentrancyGuardUpgradeable, EIP712Upgradeable {
+contract SBTSale is ISBTSale, Ownable2StepUpgradeable, ReentrancyGuardUpgradeable, EIP712Upgradeable {
     using SafeERC20 for IERC20;
     using SignatureChecker for address;
 
@@ -151,6 +151,7 @@ contract SBTSale is ISBTSale, OwnableUpgradeable, ReentrancyGuardUpgradeable, EI
     }
 
     function initialize(address initialOwner) public initializer {
+        __Ownable2Step_init();
         __Ownable_init(initialOwner);
         __ReentrancyGuard_init();
         __EIP712_init("SBTSale", "1");

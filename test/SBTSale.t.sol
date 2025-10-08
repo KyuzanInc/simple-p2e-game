@@ -1706,4 +1706,106 @@ contract SBTSaleTest is Test {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPrivateKey, digest);
         return abi.encodePacked(r, s, v);
     }
+
+    // =============================================================
+    //                   OWNERSHIP TRANSFER TESTS (KYU-2)
+    // =============================================================
+
+    function test_transferOwnership_twoStep() public {
+        address newOwner = address(0x999);
+        SBTSale sbtSale = SBTSale(payable(address(p2e)));
+
+        // Current owner should be 'deployer'
+        assertEq(sbtSale.owner(), deployer);
+
+        // Transfer ownership (step 1)
+        vm.prank(deployer);
+        sbtSale.transferOwnership(newOwner);
+
+        // Owner should still be the old owner (pending acceptance)
+        assertEq(sbtSale.owner(), deployer);
+        assertEq(sbtSale.pendingOwner(), newOwner);
+
+        // New owner must accept (step 2)
+        vm.prank(newOwner);
+        sbtSale.acceptOwnership();
+
+        // Now ownership should be transferred
+        assertEq(sbtSale.owner(), newOwner);
+        assertEq(sbtSale.pendingOwner(), address(0));
+    }
+
+    function test_transferOwnership_oldOwnerRetainsControl() public {
+        address newOwner = address(0x999);
+        SBTSale sbtSale = SBTSale(payable(address(p2e)));
+
+        // Transfer ownership
+        vm.prank(deployer);
+        sbtSale.transferOwnership(newOwner);
+
+        // Owner should still be the old owner (not yet accepted)
+        assertEq(sbtSale.owner(), deployer);
+
+        // Old owner can still perform owner actions
+        vm.prank(deployer);
+        p2e.setSigner(address(0x888));
+        assertEq(p2e.getSigner(), address(0x888));
+
+        // New owner cannot perform owner actions until accepting
+        vm.prank(newOwner);
+        vm.expectRevert();
+        p2e.setSigner(address(0x777));
+    }
+
+    function test_acceptOwnership_onlyPendingOwner() public {
+        address newOwner = address(0x999);
+        address notPendingOwner = address(0x888);
+        SBTSale sbtSale = SBTSale(payable(address(p2e)));
+
+        // Transfer ownership
+        vm.prank(deployer);
+        sbtSale.transferOwnership(newOwner);
+
+        // Random address cannot accept ownership
+        vm.prank(notPendingOwner);
+        vm.expectRevert();
+        sbtSale.acceptOwnership();
+
+        // Verify owner hasn't changed
+        assertEq(sbtSale.owner(), deployer);
+        assertEq(sbtSale.pendingOwner(), newOwner);
+
+        // Only the pending owner can accept
+        vm.prank(newOwner);
+        sbtSale.acceptOwnership();
+
+        assertEq(sbtSale.owner(), newOwner);
+        assertEq(sbtSale.pendingOwner(), address(0));
+    }
+
+    function test_transferOwnership_canOverwritePending() public {
+        address firstNewOwner = address(0x999);
+        address secondNewOwner = address(0x888);
+        SBTSale sbtSale = SBTSale(payable(address(p2e)));
+
+        // Transfer to first new owner
+        vm.prank(deployer);
+        sbtSale.transferOwnership(firstNewOwner);
+        assertEq(sbtSale.pendingOwner(), firstNewOwner);
+
+        // Owner changes mind and transfers to second new owner
+        vm.prank(deployer);
+        sbtSale.transferOwnership(secondNewOwner);
+        assertEq(sbtSale.pendingOwner(), secondNewOwner);
+
+        // First new owner cannot accept anymore
+        vm.prank(firstNewOwner);
+        vm.expectRevert();
+        sbtSale.acceptOwnership();
+
+        // Second new owner can accept
+        vm.prank(secondNewOwner);
+        sbtSale.acceptOwnership();
+        assertEq(sbtSale.owner(), secondNewOwner);
+    }
 }
