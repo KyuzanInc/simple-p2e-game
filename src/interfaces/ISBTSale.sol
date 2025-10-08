@@ -58,6 +58,7 @@ interface ISBTSale {
     error BuyerMismatch(); // 0x892b78e2
     error InsufficientRevenue(uint256 minRequired, uint256 actual); // Revenue recipient would receive less than minimum
     error InsufficientBPTReceived(uint256 received); // Liquidity provision resulted in zero or insufficient BPT
+    error OwnershipCannotBeRenounced(); // Ownership renouncement is disabled to prevent accidental loss of control
 
     // Events
     /// @dev Emitted when SBTs are purchased with complete protocol information

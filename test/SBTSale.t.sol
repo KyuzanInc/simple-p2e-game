@@ -1808,4 +1808,30 @@ contract SBTSaleTest is Test {
         sbtSale.acceptOwnership();
         assertEq(sbtSale.owner(), secondNewOwner);
     }
+
+    // =============================================================
+    //                   RENOUNCE OWNERSHIP TESTS (KYU-3)
+    // =============================================================
+
+    function test_renounceOwnership_disabled() public {
+        SBTSale sbtSale = SBTSale(payable(address(p2e)));
+
+        // Owner should not be able to renounce ownership
+        vm.prank(deployer);
+        vm.expectRevert(ISBTSale.OwnershipCannotBeRenounced.selector);
+        sbtSale.renounceOwnership();
+
+        // Verify owner hasn't changed
+        assertEq(sbtSale.owner(), deployer);
+    }
+
+    function test_renounceOwnership_nonOwnerCannotCall() public {
+        SBTSale sbtSale = SBTSale(payable(address(p2e)));
+        address nonOwner = address(0x999);
+
+        // Non-owner cannot call renounceOwnership
+        vm.prank(nonOwner);
+        vm.expectRevert();
+        sbtSale.renounceOwnership();
+    }
 }

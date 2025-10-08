@@ -157,6 +157,12 @@ contract SBTSale is ISBTSale, Ownable2StepUpgradeable, ReentrancyGuardUpgradeabl
         __EIP712_init("SBTSale", "1");
     }
 
+    /// @dev Disable renounceOwnership to prevent accidental loss of control
+    /// @notice This function is disabled to prevent accidental ownership renouncement
+    function renounceOwnership() public view override onlyOwner {
+        revert OwnershipCannotBeRenounced();
+    }
+
     /// @inheritdoc ISBTSale
     function getWOAS() external view returns (address woas) {
         return _woas;

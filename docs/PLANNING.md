@@ -84,7 +84,10 @@
 
 ### 改善方針
 
-`renounceOwnership()` をオーバーライドし、常に `revert("Cannot renounce ownership")` を返すようにします。
+1. `ISBTSale.sol` にカスタムエラー `OwnershipCannotBeRenounced()` を定義
+2. `SBTSale.sol` で `renounceOwnership()` をオーバーライドし、常にカスタムエラーで revert
+3. 他のエラーとの一貫性を保ち、ガス効率も向上
+
 これにより、コントラクトの意図しない放棄を防ぎます。
 
 ### 想定コミット
@@ -93,7 +96,8 @@
 
 ### テスト観点
 
-- `renounceOwnership()` 呼び出し時に常に revert すること。
+- `renounceOwnership()` 呼び出し時に `OwnershipCannotBeRenounced` エラーで revert すること
+- 非オーナーが呼び出した場合も適切に revert すること
 
 ---
 
