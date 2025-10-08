@@ -217,9 +217,12 @@ OZ ライブラリを `^5.0.1` のような範囲指定で導入しており、�
 - `buyer` 引数を削除し、`msg.sender` に統一
 - `_swap` の `deadline` を削除または実効化（TWAP と併用を検討）
 - `_getTotalSMPPrice()` の重複チェック削除
+- `_payWithSwapToSMP()` の `if (actualOut != requiredSMP)` チェックを削除（`_swap()` で検証済み）
 - `setBaseURI()` に `BaseURIUpdated(old, new)` を追加
+- `SoulboundToken.setBaseURI()` に空文字列チェックを追加
 - `setSigner` / `setSBTContract` に同値チェックを導入（同値なら no-op）
 - `type(IFace).interfaceId` を使用してマジック値を排除
+- `_isPOAS()` / `_isSMP()` を `getPOAS()` / `getSMP()` に依存させてコード重複を削減
 - `_getPoolAssets()` の結果を immutable 化（コスト削減）
 
 ### 想定コミット
