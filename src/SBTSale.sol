@@ -156,6 +156,13 @@ contract SBTSale is
         _disableInitializers();
     }
 
+    /**
+     * @notice Initialize the SBTSale contract with two-step ownership transfer
+     * @dev This function is called during proxy deployment to set up the upgradeable contract.
+     *      Uses OpenZeppelin's initializer pattern for upgradeable contracts.
+     *      Initializes Ownable2Step, Ownable, ReentrancyGuard, and EIP712 modules.
+     * @param initialOwner Address to be set as the initial owner with full administrative privileges
+     */
     function initialize(address initialOwner) public initializer {
         __Ownable2Step_init();
         __Ownable_init(initialOwner);

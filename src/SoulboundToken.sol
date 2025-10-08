@@ -93,7 +93,11 @@ contract SoulboundToken is
         _mintedAt[tokenId] = block.timestamp;
     }
 
-    /// @notice Update base URI for token metadata
+    /**
+     * @notice Update base URI for token metadata
+     * @dev Only accounts with DEFAULT_ADMIN_ROLE can update the base URI
+     * @param newBaseURI New base URI string for token metadata (e.g., "https://example.com/metadata/")
+     */
     function setBaseURI(string memory newBaseURI) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _baseTokenURI = newBaseURI;
     }
@@ -108,7 +112,12 @@ contract SoulboundToken is
         _unpause();
     }
 
-    /// @notice View mint timestamp of a token
+    /**
+     * @notice View mint timestamp of a token
+     * @dev Returns the block timestamp when the token was minted
+     * @param tokenId Token ID to query the mint timestamp for
+     * @return Timestamp when the token was minted (block.timestamp at mint time)
+     */
     function mintTimeOf(uint256 tokenId) external view returns (uint256) {
         return _mintedAt[tokenId];
     }
