@@ -75,6 +75,14 @@ contract SoulboundTokenTest is Test {
         assertEq(sbt.mintTimeOf(1), block.timestamp);
     }
 
+    function test_mintTimeOf_nonexistentToken() public {
+        uint256 nonexistentTokenId = 999;
+        vm.expectRevert(
+            abi.encodeWithSelector(IERC721Errors.ERC721NonexistentToken.selector, nonexistentTokenId)
+        );
+        sbt.mintTimeOf(nonexistentTokenId);
+    }
+
     function test_safeMint_restricted() public {
         vm.expectRevert(
             abi.encodeWithSelector(

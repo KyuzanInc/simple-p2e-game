@@ -115,10 +115,12 @@ contract SoulboundToken is
     /**
      * @notice View mint timestamp of a token
      * @dev Returns the block timestamp when the token was minted
+     *      Reverts with ERC721NonexistentToken if the token does not exist
      * @param tokenId Token ID to query the mint timestamp for
      * @return Timestamp when the token was minted (block.timestamp at mint time)
      */
     function mintTimeOf(uint256 tokenId) external view returns (uint256) {
+        _requireOwned(tokenId);
         return _mintedAt[tokenId];
     }
 
