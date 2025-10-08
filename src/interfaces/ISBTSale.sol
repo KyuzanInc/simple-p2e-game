@@ -26,8 +26,8 @@ interface ISBTSale {
         address buyer;
         uint256[] tokenIds;
         address paymentToken;
-        uint256 amount;
-        uint256 maxSlippageBps; // Maximum slippage in basis points (1 BPS = 0.01%)
+        uint256 amount; // Amount including slippage tolerance (calculated off-chain)
+        uint256 minRevenueOAS; // Minimum OAS revenue that revenueRecipient should receive
         uint256 deadline;
     }
 
@@ -56,7 +56,8 @@ interface ISBTSale {
     error PurchaseIdAlreadyUsed(); // 0x715018a6
     error InvalidSigner(); // 0xafb5b3b8
     error BuyerMismatch(); // 0x892b78e2
-    error SlippageExceeded(); // Slippage tolerance exceeded
+    error InsufficientRevenue(uint256 minRequired, uint256 actual); // Revenue recipient would receive less than minimum
+    error InsufficientBPTReceived(uint256 received); // Liquidity provision resulted in zero or insufficient BPT
 
     // Events
     /// @dev Emitted when SBTs are purchased with complete protocol information
@@ -130,7 +131,8 @@ interface ISBTSale {
      * 1. User initiates payment with server-signed parameters:
      *    - Array of token IDs to mint from the configured SBT contract
      *    - Payment token address (ERC20.approve required for non-native OAS)
-     *    - Payment amount in the specified token (not SMP amount)
+     *    - Payment amount in the specified token (includes slippage tolerance, calculated off-chain)
+     *    - Minimum revenue OAS amount for protocol revenue recipient
      *    - Server signature for authorization
      *    - Excess payments are refunded using the same token type
      * 2. Verifies server signature against purchase order data
@@ -140,9 +142,10 @@ interface ISBTSale {
      * 5. For non-SMP payments, swaps to required SMP amount using LP.
      *    Excess payment tokens are refunded at this stage.
      * 6. Burns SMP at pre-configured ratio
-     * 7. Provides SMP to LP at pre-configured ratio
+     * 7. Provides SMP to LP at pre-configured ratio (ensures BPT > 0)
      *    - LP tokens are sent to pre-configured dedicated address
      * 8. Swaps remaining SMP to OAS via LP and sends to pre-configured address
+     *    - Validates that revenue OAS meets minimum threshold
      * 9. Mints and transfers SBTs to msg.sender
      * 10. Refunds excess payment tokens remaining from step 5 swap
      *
@@ -152,7 +155,9 @@ interface ISBTSale {
      *              - 0x0000000000000000000000000000000000000000 for native OAS
      *              - Dynamic addresses for POAS and SMP (must be registered)
      * @param amount Total payment amount in the specified token for all SBTs.
-     *               Note: Obtain this value beforehand using queryPrice.
+     *               This amount includes slippage tolerance and is calculated off-chain.
+     *               Note: Obtain the base price using queryPrice and apply slippage tolerance.
+     * @param minRevenueOAS Minimum OAS revenue that revenueRecipient should receive
      * @param purchaseId Globally unique purchase ID for replay protection
      * @param deadline Signature expiration timestamp
      * @param signature Server signature for the purchase order
@@ -162,7 +167,7 @@ interface ISBTSale {
         address buyer,
         address paymentToken,
         uint256 amount,
-        uint256 maxSlippageBps,
+        uint256 minRevenueOAS,
         uint256 purchaseId,
         uint256 deadline,
         bytes calldata signature

@@ -69,7 +69,7 @@ contract SBTSale is ISBTSale, OwnableUpgradeable, ReentrancyGuardUpgradeable, EI
 
     // EIP-712 constants
     bytes32 private constant PURCHASE_ORDER_TYPEHASH = keccak256(
-        "PurchaseOrder(uint256 purchaseId,address buyer,uint256[] tokenIds,address paymentToken,uint256 amount,uint256 maxSlippageBps,uint256 deadline)"
+        "PurchaseOrder(uint256 purchaseId,address buyer,uint256[] tokenIds,address paymentToken,uint256 amount,uint256 minRevenueOAS,uint256 deadline)"
     );
     bytes32 private constant FREE_PURCHASE_ORDER_TYPEHASH = keccak256(
         "FreePurchaseOrder(uint256 purchaseId,address buyer,uint256[] tokenIds,uint256 deadline)"
@@ -303,7 +303,7 @@ contract SBTSale is ISBTSale, OwnableUpgradeable, ReentrancyGuardUpgradeable, EI
         address buyer,
         address paymentToken,
         uint256 amount,
-        uint256 maxSlippageBps,
+        uint256 minRevenueOAS,
         uint256 purchaseId,
         uint256 deadline,
         bytes calldata signature
@@ -339,7 +339,7 @@ contract SBTSale is ISBTSale, OwnableUpgradeable, ReentrancyGuardUpgradeable, EI
             tokenIds: tokenIds,
             paymentToken: paymentToken,
             amount: amount,
-            maxSlippageBps: maxSlippageBps,
+            minRevenueOAS: minRevenueOAS,
             deadline: deadline
         });
 
@@ -370,9 +370,6 @@ contract SBTSale is ISBTSale, OwnableUpgradeable, ReentrancyGuardUpgradeable, EI
         data.actualAmount = _payWithSwapToSMP(paymentToken, amount, data.requiredSMP);
         data.refundAmount = amount - data.actualAmount;
 
-        // Validate slippage tolerance
-        _validateSlippage(data.actualAmount, amount, maxSlippageBps);
-
         // Burn configured percentage of SMP
         data.burnSMP = _burnSMP(data.requiredSMP);
 
@@ -382,7 +379,7 @@ contract SBTSale is ISBTSale, OwnableUpgradeable, ReentrancyGuardUpgradeable, EI
         // Swap remaining SMP to OAS for protocol revenue
         data.revenueSMP = data.requiredSMP - data.burnSMP - data.liquiditySMP;
         if (data.revenueSMP > 0) {
-            data.revenueOAS = _swapSMPtoOASForRevenueRecipient(data.revenueSMP);
+            data.revenueOAS = _swapSMPtoOASForRevenueRecipient(data.revenueSMP, minRevenueOAS);
         }
 
         // Mint NFTs to buyer
@@ -473,28 +470,6 @@ contract SBTSale is ISBTSale, OwnableUpgradeable, ReentrancyGuardUpgradeable, EI
         return addr == address(0);
     }
 
-    /// @dev Validate slippage tolerance
-    /// @param actualAmount Actual amount paid
-    /// @param expectedAmount Expected amount to pay
-    /// @param maxSlippageBps Maximum slippage in basis points (1 BPS = 0.01%)
-    function _validateSlippage(uint256 actualAmount, uint256 expectedAmount, uint256 maxSlippageBps)
-        internal
-        pure
-    {
-        if (actualAmount <= expectedAmount) {
-            // No slippage or favorable slippage, always allowed
-            return;
-        }
-
-        // Calculate maximum allowed amount with slippage tolerance
-        // maxAllowed = expectedAmount * (10000 + maxSlippageBps) / 10000
-        uint256 maxAllowed = expectedAmount * (MAX_BASIS_POINTS + maxSlippageBps) / MAX_BASIS_POINTS;
-
-        if (actualAmount > maxAllowed) {
-            revert SlippageExceeded();
-        }
-    }
-
     /// @dev Hash a PurchaseOrder struct for EIP-712 signature verification
     function _hashPurchaseOrder(PurchaseOrder memory order) internal view returns (bytes32) {
         // Convert dynamic array to fixed-size hash for EIP-712
@@ -510,7 +485,7 @@ contract SBTSale is ISBTSale, OwnableUpgradeable, ReentrancyGuardUpgradeable, EI
                     tokenIdsHash,
                     order.paymentToken,
                     order.amount,
-                    order.maxSlippageBps,
+                    order.minRevenueOAS,
                     order.deadline
                 )
             )
@@ -874,19 +849,31 @@ contract SBTSale is ISBTSale, OwnableUpgradeable, ReentrancyGuardUpgradeable, EI
         IVault vault = IVault(_vault);
         IERC20(_smp).approve(address(vault), providedSMP);
 
+        // Get LP recipient's BPT balance before liquidity provision
+        // Note: Pool contract itself is the BPT (ERC20) token in Balancer V2
+        IVaultPool pool = IVaultPool(_liquidityPool);
+        uint256 bptBefore = pool.balanceOf(_lpRecipient);
+
         // Provide liquidity to the pool
         vault.joinPool({
-            poolId: IVaultPool(_liquidityPool).getPoolId(),
+            poolId: pool.getPoolId(),
             sender: address(this),
             recipient: _lpRecipient, // LP tokens sent directly to LP recipient
             request: request
         });
+
+        // Validate that BPT was received
+        uint256 bptReceived = pool.balanceOf(_lpRecipient) - bptBefore;
+        if (bptReceived == 0) {
+            revert InsufficientBPTReceived(bptReceived);
+        }
     }
 
     /// @dev Swap SMP to OAS and send to revenue recipient
     /// @param revenueSMP Amount of SMP to swap for revenue
+    /// @param minRevenueOAS Minimum OAS revenue that revenueRecipient should receive
     /// @return revenueOAS Amount of OAS received from swap
-    function _swapSMPtoOASForRevenueRecipient(uint256 revenueSMP)
+    function _swapSMPtoOASForRevenueRecipient(uint256 revenueSMP, uint256 minRevenueOAS)
         internal
         returns (uint256 revenueOAS)
     {
@@ -903,8 +890,9 @@ contract SBTSale is ISBTSale, OwnableUpgradeable, ReentrancyGuardUpgradeable, EI
             })
         );
 
-        if (revenueOAS == 0) {
-            revert InvalidPaymentAmount();
+        // Validate revenue meets minimum threshold
+        if (revenueOAS < minRevenueOAS) {
+            revert InsufficientRevenue(minRevenueOAS, revenueOAS);
         }
     }
 
