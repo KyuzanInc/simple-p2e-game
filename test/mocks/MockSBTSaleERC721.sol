@@ -41,7 +41,14 @@ contract MockSBTSaleERC721 is ISBTSaleERC721, ERC721 {
      * @param interfaceId Interface ID to check
      * @return bool True if interface is supported
      */
-    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC721, IERC165) returns (bool) {
-        return interfaceId == type(ISBTSaleERC721).interfaceId || super.supportsInterface(interfaceId);
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        virtual
+        override(ERC721, IERC165)
+        returns (bool)
+    {
+        return
+            interfaceId == type(ISBTSaleERC721).interfaceId || super.supportsInterface(interfaceId);
     }
 }

@@ -6,7 +6,8 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ERC20Burnable} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
-import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
+import {Ownable2StepUpgradeable} from
+    "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import {ReentrancyGuardUpgradeable} from
     "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import {EIP712Upgradeable} from
@@ -34,7 +35,12 @@ import {IPOASMinter} from "./interfaces/IPOASMinter.sol";
  * @dev Contract for selling SBTs using multiple payment tokens. Handles SMP burning,
  *      liquidity provision and revenue distribution.
  */
-contract SBTSale is ISBTSale, Ownable2StepUpgradeable, ReentrancyGuardUpgradeable, EIP712Upgradeable {
+contract SBTSale is
+    ISBTSale,
+    Ownable2StepUpgradeable,
+    ReentrancyGuardUpgradeable,
+    EIP712Upgradeable
+{
     using SafeERC20 for IERC20;
     using SignatureChecker for address;
 
@@ -497,7 +503,11 @@ contract SBTSale is ISBTSale, Ownable2StepUpgradeable, ReentrancyGuardUpgradeabl
         );
     }
 
-    function _hashFreePurchaseOrder(FreePurchaseOrder memory order) internal view returns (bytes32) {
+    function _hashFreePurchaseOrder(FreePurchaseOrder memory order)
+        internal
+        view
+        returns (bytes32)
+    {
         bytes32 tokenIdsHash = keccak256(abi.encode(order.tokenIds));
 
         return _hashTypedDataV4(
@@ -652,8 +662,10 @@ contract SBTSale is ISBTSale, Ownable2StepUpgradeable, ReentrancyGuardUpgradeabl
         // Replace WOAS with ETH sentinel for native OAS/POAS operations
         // Balancer V2 automatically handles OAS <-> WOAS conversion when msg.value is provided
         // Check both tokenIn and tokenOut - one of them must be OAS/POAS when swapping with SMP
-        if (_isNativeOAS(swapData.tokenIn) || _isPOAS(swapData.tokenIn) || 
-            _isNativeOAS(swapData.tokenOut) || _isPOAS(swapData.tokenOut)) {
+        if (
+            _isNativeOAS(swapData.tokenIn) || _isPOAS(swapData.tokenIn)
+                || _isNativeOAS(swapData.tokenOut) || _isPOAS(swapData.tokenOut)
+        ) {
             assets[woasPoolIndex] = IAsset(address(0)); // ETH sentinel for OAS/POAS
         }
 
@@ -789,7 +801,7 @@ contract SBTSale is ISBTSale, Ownable2StepUpgradeable, ReentrancyGuardUpgradeabl
     /// @return requiredOAS Required OAS amount to swap via LP (Vault handles WOAS conversion)
     function _getRequiredOASFromLP(uint256 requiredSMP) internal returns (uint256 requiredOAS) {
         (IAsset[] memory assets, uint8 woasPoolIndex, uint8 smpPoolIndex) = _getPoolAssets();
-        
+
         // Replace WOAS with ETH sentinel for clarity since this function is called
         // when user wants to pay with OAS/POAS (not WOAS)
         // Note: queryBatchSwap works with both WOAS address and ETH sentinel (address(0))
