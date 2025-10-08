@@ -110,17 +110,23 @@ contract SBTSale is
         uint256 smpBurnRatio,
         uint256 smpLiquidityRatio
     ) {
-        if (_isZeroAddress(poasMinter) || _isZeroAddress(liquidityPool)) {
-            revert InvalidPaymentToken();
+        if (_isZeroAddress(poasMinter)) {
+            revert InvalidAddress(poasMinter);
         }
-        if (_isZeroAddress(lpRecipient) || _isZeroAddress(revenueRecipient)) {
-            revert InvalidRecipient();
+        if (_isZeroAddress(liquidityPool)) {
+            revert InvalidAddress(liquidityPool);
+        }
+        if (_isZeroAddress(lpRecipient)) {
+            revert InvalidRecipient(lpRecipient);
+        }
+        if (_isZeroAddress(revenueRecipient)) {
+            revert InvalidRecipient(revenueRecipient);
         }
         if (smpBasePrice == 0) {
-            revert InvalidPaymentAmount();
+            revert InvalidPaymentAmount(smpBasePrice);
         }
         if (smpBurnRatio + smpLiquidityRatio > MAX_BASIS_POINTS) {
-            revert InvalidProtocolValue();
+            revert InvalidProtocolValue("smpBurnRatio + smpLiquidityRatio exceeds MAX_BASIS_POINTS");
         }
 
         // Get vault and pool tokens from liquidityPool
@@ -224,7 +230,7 @@ contract SBTSale is
     /// @inheritdoc ISBTSale
     function setSigner(address newSigner) external onlyOwner {
         if (newSigner == address(0)) {
-            revert InvalidSigner();
+            revert InvalidSigner(newSigner);
         }
         address oldSigner = _signer;
         _signer = newSigner;
@@ -244,17 +250,17 @@ contract SBTSale is
     /// @inheritdoc ISBTSale
     function setSBTContract(ISBTSaleERC721 newSBTContract) external onlyOwner {
         if (address(newSBTContract) == address(0)) {
-            revert InvalidAddress();
+            revert InvalidAddress(address(newSBTContract));
         }
 
         // Verify contract implements required interfaces using ERC-165
         try IERC165(address(newSBTContract)).supportsInterface(type(ISBTSaleERC721).interfaceId)
         returns (bool supportsISBTSaleERC721) {
             if (!supportsISBTSaleERC721) {
-                revert InvalidAddress();
+                revert InvalidAddress(address(newSBTContract));
             }
         } catch {
-            revert InvalidAddress();
+            revert InvalidAddress(address(newSBTContract));
         }
 
         ISBTSaleERC721 oldContract = _sbtContract;
@@ -276,19 +282,19 @@ contract SBTSale is
             revert NoItems();
         }
         if (recipients.length > MAX_BATCH_SIZE) {
-            revert TooManyItems();
+            revert TooManyItems(recipients.length, MAX_BATCH_SIZE);
         }
         if (recipients.length != tokenIds.length) {
-            revert ArrayLengthMismatch();
+            revert ArrayLengthMismatch(recipients.length, tokenIds.length);
         }
         if (address(_sbtContract) == address(0)) {
-            revert InvalidAddress();
+            revert InvalidAddress(address(_sbtContract));
         }
 
         uint256 length = recipients.length;
         for (uint256 i = 0; i < length; ++i) {
             if (_isZeroAddress(recipients[i])) {
-                revert InvalidAddress();
+                revert InvalidAddress(recipients[i]);
             }
             _sbtContract.safeMint(recipients[i], tokenIds[i]);
         }
@@ -308,7 +314,7 @@ contract SBTSale is
             revert NoItems();
         }
         if (!_isValidPaymentToken(paymentToken)) {
-            revert InvalidPaymentToken();
+            revert InvalidPaymentToken(paymentToken);
         }
 
         uint256 smpPrice = _getTotalSMPPrice(tokenCount);
@@ -336,18 +342,18 @@ contract SBTSale is
             revert NoItems();
         }
         if (tokenIds.length > MAX_BATCH_SIZE) {
-            revert TooManyItems();
+            revert TooManyItems(tokenIds.length, MAX_BATCH_SIZE);
         }
         if (!_isValidPaymentToken(paymentToken)) {
-            revert InvalidPaymentToken();
+            revert InvalidPaymentToken(paymentToken);
         }
         if (address(_sbtContract) == address(0)) {
-            revert InvalidAddress();
+            revert InvalidAddress(address(_sbtContract));
         }
 
         // Verify buyer matches msg.sender first
         if (msg.sender != buyer) {
-            revert BuyerMismatch();
+            revert BuyerMismatch(buyer, msg.sender);
         }
 
         // Create purchase order for signature verification
@@ -363,10 +369,10 @@ contract SBTSale is
 
         // Signature verification
         if (usedPurchaseIds[purchaseId]) {
-            revert PurchaseIdAlreadyUsed();
+            revert PurchaseIdAlreadyUsed(purchaseId);
         }
         if (block.timestamp > deadline) {
-            revert ExpiredDeadline();
+            revert ExpiredDeadline(deadline, block.timestamp);
         }
         if (!_verifyPurchaseOrder(order, signature)) {
             revert InvalidSignature();
@@ -437,19 +443,19 @@ contract SBTSale is
             revert NoItems();
         }
         if (tokenIds.length > MAX_BATCH_SIZE) {
-            revert TooManyItems();
+            revert TooManyItems(tokenIds.length, MAX_BATCH_SIZE);
         }
         if (address(_sbtContract) == address(0)) {
-            revert InvalidAddress();
+            revert InvalidAddress(address(_sbtContract));
         }
         if (msg.sender != buyer) {
-            revert BuyerMismatch();
+            revert BuyerMismatch(buyer, msg.sender);
         }
         if (usedPurchaseIds[purchaseId]) {
-            revert PurchaseIdAlreadyUsed();
+            revert PurchaseIdAlreadyUsed(purchaseId);
         }
         if (block.timestamp > deadline) {
-            revert ExpiredDeadline();
+            revert ExpiredDeadline(deadline, block.timestamp);
         }
 
         FreePurchaseOrder memory order = FreePurchaseOrder({
@@ -618,7 +624,7 @@ contract SBTSale is
             revert NoItems();
         }
         if (_smpBasePrice == 0) {
-            revert InvalidPaymentAmount();
+            revert InvalidPaymentAmount(_smpBasePrice);
         }
 
         // Calculate total: each NFT costs the base SMP price
@@ -633,22 +639,23 @@ contract SBTSale is
         // Native OAS: validate msg.value
         if (_isNativeOAS(paymentToken)) {
             if (msg.value != amount) {
-                revert InvalidPaymentAmount();
+                revert InvalidPaymentAmount(msg.value);
             }
             return;
         }
 
         // ERC20 tokens: msg.value must be zero
         if (msg.value != 0) {
-            revert InvalidPaymentAmount();
+            revert InvalidPaymentAmount(msg.value);
         }
 
         // Execute ERC20 transfer and validate received amount
         // Note: POAS burns tokens and sends equivalent OAS to this contract
         uint256 beforeBalance = _getBalance(paymentToken);
         IERC20(paymentToken).transferFrom(from, address(this), amount);
-        if (_getBalance(paymentToken) - beforeBalance != amount) {
-            revert InvalidPaymentAmount();
+        uint256 receivedAmount = _getBalance(paymentToken) - beforeBalance;
+        if (receivedAmount != amount) {
+            revert InvalidPaymentAmount(receivedAmount);
         }
     }
 
@@ -661,7 +668,7 @@ contract SBTSale is
         returns (uint256 actualIn, uint256 actualOut)
     {
         if (swapData.amountIn == 0) {
-            revert InvalidPaymentAmount();
+            revert InvalidPaymentAmount(swapData.amountIn);
         }
 
         (IAsset[] memory assets, uint8 woasPoolIndex, uint8 smpPoolIndex) = _getPoolAssets();
@@ -778,7 +785,7 @@ contract SBTSale is
 
         // Verify we received the exact SMP amount needed for the purchase
         if (actualOut != requiredSMP) {
-            revert InvalidPaymentAmount();
+            revert InvalidPaymentAmount(actualOut);
         }
     }
 
@@ -925,7 +932,7 @@ contract SBTSale is
     /// @param tokenIds Array of token IDs to mint
     function _mintNFTs(address to, uint256[] calldata tokenIds) internal {
         if (address(_sbtContract) == address(0)) {
-            revert InvalidAddress();
+            revert InvalidAddress(address(_sbtContract));
         }
 
         uint256 length = tokenIds.length;

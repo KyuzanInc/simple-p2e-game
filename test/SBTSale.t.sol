@@ -202,7 +202,7 @@ contract SBTSaleTest is Test {
     // =============================================================
 
     function test_constructor_invalidPOASMinter() public {
-        vm.expectRevert(ISBTSale.InvalidPaymentToken.selector);
+        vm.expectRevert(abi.encodeWithSelector(ISBTSale.InvalidAddress.selector, address(0)));
         new SBTSale({
             poasMinter: address(0),
             liquidityPool: address(pool),
@@ -215,7 +215,7 @@ contract SBTSaleTest is Test {
     }
 
     function test_constructor_invalidLiquidityPool() public {
-        vm.expectRevert(ISBTSale.InvalidPaymentToken.selector);
+        vm.expectRevert(abi.encodeWithSelector(ISBTSale.InvalidAddress.selector, address(0)));
         new SBTSale({
             poasMinter: address(poasMinter),
             liquidityPool: address(0),
@@ -228,7 +228,7 @@ contract SBTSaleTest is Test {
     }
 
     function test_constructor_invalidLPRecipient() public {
-        vm.expectRevert(ISBTSale.InvalidRecipient.selector);
+        vm.expectRevert(abi.encodeWithSelector(ISBTSale.InvalidRecipient.selector, address(0)));
         new SBTSale({
             poasMinter: address(poasMinter),
             liquidityPool: address(pool),
@@ -241,7 +241,7 @@ contract SBTSaleTest is Test {
     }
 
     function test_constructor_invalidRevenueRecipient() public {
-        vm.expectRevert(ISBTSale.InvalidRecipient.selector);
+        vm.expectRevert(abi.encodeWithSelector(ISBTSale.InvalidRecipient.selector, address(0)));
         new SBTSale({
             poasMinter: address(poasMinter),
             liquidityPool: address(pool),
@@ -254,7 +254,7 @@ contract SBTSaleTest is Test {
     }
 
     function test_constructor_invalidSMPBasePrice() public {
-        vm.expectRevert(ISBTSale.InvalidPaymentAmount.selector);
+        vm.expectRevert(abi.encodeWithSelector(ISBTSale.InvalidPaymentAmount.selector, 0));
         new SBTSale({
             poasMinter: address(poasMinter),
             liquidityPool: address(pool),
@@ -267,7 +267,12 @@ contract SBTSaleTest is Test {
     }
 
     function test_constructor_invalidRatioSum() public {
-        vm.expectRevert(ISBTSale.InvalidProtocolValue.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                ISBTSale.InvalidProtocolValue.selector,
+                "smpBurnRatio + smpLiquidityRatio exceeds MAX_BASIS_POINTS"
+            )
+        );
         new SBTSale({
             poasMinter: address(poasMinter),
             liquidityPool: address(pool),
@@ -347,7 +352,7 @@ contract SBTSaleTest is Test {
 
     function test_setSigner_zeroAddress() public {
         vm.startPrank(deployer);
-        vm.expectRevert(ISBTSale.InvalidSigner.selector);
+        vm.expectRevert(abi.encodeWithSelector(ISBTSale.InvalidSigner.selector, address(0)));
         p2e.setSigner(address(0));
         vm.stopPrank();
     }
@@ -388,7 +393,7 @@ contract SBTSaleTest is Test {
 
     function test_setSBTContract_zeroAddress() public {
         vm.startPrank(deployer);
-        vm.expectRevert(ISBTSale.InvalidAddress.selector);
+        vm.expectRevert(abi.encodeWithSelector(ISBTSale.InvalidAddress.selector, address(0)));
         p2e.setSBTContract(ISBTSaleERC721(address(0)));
         vm.stopPrank();
     }
@@ -448,8 +453,9 @@ contract SBTSaleTest is Test {
 
         // Try to set a contract that doesn't implement ISBTSaleERC721
         // WOAS doesn't implement ISBTSaleERC721, so it should fail
-        vm.expectRevert(ISBTSale.InvalidAddress.selector);
-        p2e.setSBTContract(ISBTSaleERC721(address(woas)));
+        address invalidContract = address(woas);
+        vm.expectRevert(abi.encodeWithSelector(ISBTSale.InvalidAddress.selector, invalidContract));
+        p2e.setSBTContract(ISBTSaleERC721(invalidContract));
 
         vm.stopPrank();
     }
@@ -537,7 +543,7 @@ contract SBTSaleTest is Test {
         tokenIds[1] = 206;
         tokenIds[2] = 207;
 
-        vm.expectRevert(ISBTSale.ArrayLengthMismatch.selector);
+        vm.expectRevert(abi.encodeWithSelector(ISBTSale.ArrayLengthMismatch.selector, 2, 3));
         p2e.mintByOwner(recipients, tokenIds);
         vm.stopPrank();
     }
@@ -552,7 +558,7 @@ contract SBTSaleTest is Test {
         tokenIds[0] = 208;
         tokenIds[1] = 209;
 
-        vm.expectRevert(ISBTSale.InvalidAddress.selector);
+        vm.expectRevert(abi.encodeWithSelector(ISBTSale.InvalidAddress.selector, address(0)));
         p2e.mintByOwner(recipients, tokenIds);
         vm.stopPrank();
     }
@@ -582,7 +588,7 @@ contract SBTSaleTest is Test {
         uint256[] memory tokenIds = new uint256[](1);
         tokenIds[0] = 210;
 
-        vm.expectRevert(ISBTSale.InvalidAddress.selector);
+        vm.expectRevert(abi.encodeWithSelector(ISBTSale.InvalidAddress.selector, address(0)));
         testP2E.mintByOwner(recipients, tokenIds);
         vm.stopPrank();
     }
@@ -597,7 +603,7 @@ contract SBTSaleTest is Test {
             tokenIds[i] = i + 2000;
         }
 
-        vm.expectRevert(ISBTSale.TooManyItems.selector);
+        vm.expectRevert(abi.encodeWithSelector(ISBTSale.TooManyItems.selector, 201, 200));
         p2e.mintByOwner(recipients, tokenIds);
         vm.stopPrank();
     }
@@ -681,7 +687,12 @@ contract SBTSaleTest is Test {
         bytes memory signature = _signPurchaseOrder(order, signerPrivateKey);
 
         vm.deal(sender, amount);
-        vm.expectRevert(ISBTSale.ExpiredDeadline.selector);
+        uint256 currentTimestamp = block.timestamp;
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                ISBTSale.ExpiredDeadline.selector, pastDeadline, currentTimestamp
+            )
+        );
         p2e.purchase{value: amount}(
             tokenIds, sender, nativeOAS, amount, 300, purchaseId, pastDeadline, signature
         );
@@ -713,7 +724,7 @@ contract SBTSaleTest is Test {
         order = _createPurchaseOrder(purchaseId, sender, tokenIds, nativeOAS, amount, 300, deadline);
         signature = _signPurchaseOrder(order, signerPrivateKey);
 
-        vm.expectRevert(ISBTSale.PurchaseIdAlreadyUsed.selector);
+        vm.expectRevert(abi.encodeWithSelector(ISBTSale.PurchaseIdAlreadyUsed.selector, purchaseId));
         p2e.purchase{value: amount}(
             tokenIds, sender, nativeOAS, amount, 300, purchaseId, deadline, signature
         );
@@ -737,7 +748,9 @@ contract SBTSaleTest is Test {
 
         vm.startPrank(sender);
         vm.deal(sender, amount);
-        vm.expectRevert(ISBTSale.BuyerMismatch.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(ISBTSale.BuyerMismatch.selector, differentBuyer, sender)
+        );
         p2e.purchase{value: amount}(
             tokenIds, differentBuyer, nativeOAS, amount, 300, purchaseId, deadline, signature
         );
@@ -896,7 +909,7 @@ contract SBTSaleTest is Test {
         bytes memory signature = abi.encodePacked(r, s, v);
 
         vm.deal(sender, amount);
-        vm.expectRevert(ISBTSale.InvalidAddress.selector);
+        vm.expectRevert(abi.encodeWithSelector(ISBTSale.InvalidAddress.selector, address(0)));
         testP2E.purchase{value: amount}(
             tokenIds, sender, nativeOAS, amount, 300, 999, block.timestamp + 1 hours, signature
         );
@@ -918,7 +931,7 @@ contract SBTSaleTest is Test {
         bytes memory signature = _signPurchaseOrder(order, signerPrivateKey);
 
         vm.deal(sender, amount);
-        vm.expectRevert(ISBTSale.TooManyItems.selector);
+        vm.expectRevert(abi.encodeWithSelector(ISBTSale.TooManyItems.selector, 201, 200));
         p2e.purchase{value: amount}(
             tokenIds, sender, nativeOAS, amount, 0, 998, block.timestamp + 1 hours, signature
         );
@@ -938,7 +951,9 @@ contract SBTSaleTest is Test {
         );
         bytes memory signature = _signPurchaseOrder(order, signerPrivateKey);
 
-        vm.expectRevert(ISBTSale.InvalidPaymentToken.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(ISBTSale.InvalidPaymentToken.selector, invalidToken)
+        );
         p2e.purchase(
             tokenIds, sender, invalidToken, amount, 0, 997, block.timestamp + 1 hours, signature
         );
@@ -987,9 +1002,12 @@ contract SBTSaleTest is Test {
         );
         bytes memory signature = _signPurchaseOrder(order, signerPrivateKey);
 
-        vm.deal(sender, amount * 2);
-        vm.expectRevert(ISBTSale.InvalidPaymentAmount.selector);
-        p2e.purchase{value: amount * 2}( // Sending wrong msg.value
+        uint256 overpayAmount = amount * 2;
+        vm.deal(sender, overpayAmount);
+        vm.expectRevert(
+            abi.encodeWithSelector(ISBTSale.InvalidPaymentAmount.selector, overpayAmount)
+        );
+        p2e.purchase{value: overpayAmount}( // Sending wrong msg.value
         tokenIds, sender, nativeOAS, amount, 0, 995, block.timestamp + 1 hours, signature);
         vm.stopPrank();
     }
@@ -1007,8 +1025,11 @@ contract SBTSaleTest is Test {
         );
         bytes memory signature = _signPurchaseOrder(order, signerPrivateKey);
 
-        vm.expectRevert(ISBTSale.InvalidPaymentAmount.selector);
-        p2e.purchase{value: 1 ether}( // Should not send msg.value for ERC20
+        uint256 unexpectedValue = 1 ether;
+        vm.expectRevert(
+            abi.encodeWithSelector(ISBTSale.InvalidPaymentAmount.selector, unexpectedValue)
+        );
+        p2e.purchase{value: unexpectedValue}( // Should not send msg.value for ERC20
         tokenIds, sender, address(smp), amount, 0, 994, block.timestamp + 1 hours, signature);
         vm.stopPrank();
     }
@@ -1024,7 +1045,9 @@ contract SBTSaleTest is Test {
 
     function test_queryPrice_invalidPaymentToken() public {
         address invalidToken = makeAddr("invalidToken");
-        vm.expectRevert(ISBTSale.InvalidPaymentToken.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(ISBTSale.InvalidPaymentToken.selector, invalidToken)
+        );
         p2e.queryPrice(1, invalidToken);
     }
 
@@ -1323,7 +1346,12 @@ contract SBTSaleTest is Test {
             _createFreePurchaseOrder(purchaseId, sender, tokenIds, deadline);
         bytes memory signature = _signFreePurchaseOrder(order, signerPrivateKey);
 
-        vm.expectRevert(ISBTSale.ExpiredDeadline.selector);
+        uint256 currentTimestamp = block.timestamp;
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                ISBTSale.ExpiredDeadline.selector, deadline, currentTimestamp
+            )
+        );
         p2e.freePurchase(tokenIds, sender, purchaseId, deadline, signature);
         vm.stopPrank();
     }
@@ -1345,7 +1373,7 @@ contract SBTSaleTest is Test {
 
         assertTrue(p2e.isUsedPurchaseId(purchaseId));
 
-        vm.expectRevert(ISBTSale.PurchaseIdAlreadyUsed.selector);
+        vm.expectRevert(abi.encodeWithSelector(ISBTSale.PurchaseIdAlreadyUsed.selector, purchaseId));
         p2e.freePurchase(tokenIds, sender, purchaseId, deadline, signature);
         vm.stopPrank();
     }
@@ -1363,7 +1391,9 @@ contract SBTSaleTest is Test {
             _createFreePurchaseOrder(purchaseId, differentBuyer, tokenIds, deadline);
         bytes memory signature = _signFreePurchaseOrder(order, signerPrivateKey);
 
-        vm.expectRevert(ISBTSale.BuyerMismatch.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(ISBTSale.BuyerMismatch.selector, differentBuyer, sender)
+        );
         p2e.freePurchase(tokenIds, differentBuyer, purchaseId, deadline, signature);
         vm.stopPrank();
     }
@@ -1383,7 +1413,7 @@ contract SBTSaleTest is Test {
             _createFreePurchaseOrder(purchaseId, sender, tokenIds, deadline);
         bytes memory signature = _signFreePurchaseOrder(order, signerPrivateKey);
 
-        vm.expectRevert(ISBTSale.TooManyItems.selector);
+        vm.expectRevert(abi.encodeWithSelector(ISBTSale.TooManyItems.selector, 201, 200));
         p2e.freePurchase(tokenIds, sender, purchaseId, deadline, signature);
         vm.stopPrank();
     }
@@ -1447,7 +1477,7 @@ contract SBTSaleTest is Test {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPrivateKey, digest);
         bytes memory signature = abi.encodePacked(r, s, v);
 
-        vm.expectRevert(ISBTSale.InvalidAddress.selector);
+        vm.expectRevert(abi.encodeWithSelector(ISBTSale.InvalidAddress.selector, address(0)));
         testP2E.freePurchase(tokenIds, sender, purchaseId, deadline, signature);
         vm.stopPrank();
     }

@@ -40,22 +40,22 @@ interface ISBTSale {
     }
 
     // Errors
-    error InvalidPaymentToken(); // 0x56e7ec5f
-    error InvalidRecipient(); // 0x9c8d2cd2
-    error InvalidPaymentAmount(); // 0xfc512fde
-    error InvalidProtocolValue(); // 0x3c88b7e9
-    error InvalidPool(); // 0x2083cd40
-    error InvalidAddress(); // 0xe6c4247b
-    error InvalidSwap(string message); // 0x3bea1958
-    error NoItems(); // 0x0483ac36
-    error TooManyItems(); // 0x1f645e1a
-    error ArrayLengthMismatch(); // 0xa24a13a6
-    error TransferFailed(); // 0x90b8ec18
-    error InvalidSignature(); // 0x8baa579f
-    error ExpiredDeadline(); // 0x3a5c06d1
-    error PurchaseIdAlreadyUsed(); // 0x715018a6
-    error InvalidSigner(); // 0xafb5b3b8
-    error BuyerMismatch(); // 0x892b78e2
+    error InvalidPaymentToken(address token); // Invalid or unsupported payment token
+    error InvalidRecipient(address recipient); // Invalid recipient address (zero address or other constraint violation)
+    error InvalidPaymentAmount(uint256 amount); // Payment amount does not match expected value
+    error InvalidProtocolValue(string parameter); // Invalid protocol parameter value
+    error InvalidPool(); // Invalid liquidity pool configuration
+    error InvalidAddress(address addr); // Invalid address provided
+    error InvalidSwap(string message); // Swap operation failed with detailed message
+    error NoItems(); // No items specified for operation
+    error TooManyItems(uint256 count, uint256 maxAllowed); // Item count exceeds maximum allowed
+    error ArrayLengthMismatch(uint256 length1, uint256 length2); // Array length mismatch between parameters
+    error TransferFailed(address token, address to, uint256 amount); // Token transfer failed
+    error InvalidSignature(); // Signature verification failed
+    error ExpiredDeadline(uint256 deadline, uint256 currentTime); // Signature deadline has expired
+    error PurchaseIdAlreadyUsed(uint256 purchaseId); // Purchase ID has already been used
+    error InvalidSigner(address signer); // Signer address is invalid or not set
+    error BuyerMismatch(address expected, address actual); // Buyer address does not match authorized buyer
     error InsufficientRevenue(uint256 minRequired, uint256 actual); // Revenue recipient would receive less than minimum
     error InsufficientBPTReceived(uint256 received); // Liquidity provision resulted in zero or insufficient BPT
     error OwnershipCannotBeRenounced(); // Ownership renouncement is disabled to prevent accidental loss of control
