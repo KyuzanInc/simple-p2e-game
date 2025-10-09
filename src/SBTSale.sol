@@ -707,8 +707,9 @@ contract SBTSale is
             limits[tokenOutIndex] = int256(0); // Zero = no minimum output constraint
         }
 
-        // Execute swap with 5-minute deadline
-        uint256 deadline = block.timestamp + 5 minutes;
+        // Deadline set to max value since purchase() already validates deadline via signature
+        // Transaction execution is atomic, so additional deadline check is redundant
+        uint256 deadline = type(uint256).max;
 
         int256[] memory deltas;
         if (_isNativeOAS(swapData.tokenIn) || _isPOAS(swapData.tokenIn)) {
