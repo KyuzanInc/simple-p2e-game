@@ -232,6 +232,10 @@ contract SBTSale is
         if (newSigner == address(0)) {
             revert InvalidSigner(newSigner);
         }
+        // No-op if setting the same value to avoid unnecessary event emission and gas cost
+        if (newSigner == _signer) {
+            return;
+        }
         address oldSigner = _signer;
         _signer = newSigner;
         emit SignerUpdated(oldSigner, newSigner);
@@ -251,6 +255,11 @@ contract SBTSale is
     function setSBTContract(ISBTSaleERC721 newSBTContract) external onlyOwner {
         if (address(newSBTContract) == address(0)) {
             revert InvalidAddress(address(newSBTContract));
+        }
+
+        // No-op if setting the same value to avoid unnecessary event emission and gas cost
+        if (newSBTContract == _sbtContract) {
+            return;
         }
 
         // Verify contract implements required interfaces using ERC-165
