@@ -613,9 +613,7 @@ contract SBTSale is
         if (tokenCount == 0) {
             revert NoItems();
         }
-        if (_smpBasePrice == 0) {
-            revert InvalidPaymentAmount(_smpBasePrice);
-        }
+        // Note: _smpBasePrice is guaranteed to be non-zero (validated in constructor)
 
         // Calculate total: each NFT costs the base SMP price
         totalSMPPrice = tokenCount * _smpBasePrice;
@@ -743,13 +741,15 @@ contract SBTSale is
         if (actualIn > swapData.amountIn) {
             revert InvalidSwap("Input token exceeded limit");
         }
+        // Validates exact output amount when GIVEN_OUT mode is used (amountOut > 0)
+        // This check makes redundant checks in callers like _payWithSwapToSMP() unnecessary
         if (swapData.amountOut > 0 && actualOut != swapData.amountOut) {
             revert InvalidSwap("Output token below required amount");
         }
     }
 
     /// @dev Swap payment tokens to SMP via WOAS-SMP liquidity pool
-    /// @param paymentToken Token to swap from (NATIVE_OAS/POAS)
+    /// @param paymentToken Token to swap from (NATIVE_OAS/POAS/SMP)
     /// @param paymentAmount Payment token amount used for swap input
     /// @param requiredSMP SMP token amount required for swap output
     /// @return actualIn Actual input token amount used in swap
@@ -757,13 +757,14 @@ contract SBTSale is
         internal
         returns (uint256 actualIn)
     {
-        uint256 actualOut;
         if (_isSMP(paymentToken)) {
-            // Already SMP, no swap needed
-            (actualIn, actualOut) = (paymentAmount, paymentAmount);
+            // Already SMP, no swap needed - use exact required amount
+            // Note: Excess SMP (paymentAmount - requiredSMP) will be refunded
+            actualIn = requiredSMP;
         } else {
             // Execute swap: Native OAS -> SMP (Vault handles OAS->WOAS conversion)
-            (actualIn, actualOut) = _swap(
+            // Note: _swap() validates that actualOut equals requiredSMP
+            (actualIn,) = _swap(
                 SwapData({
                     tokenIn: paymentToken, // Native OAS (including converted POAS) is passed as address(0)
                     tokenOut: _smp,
@@ -772,11 +773,6 @@ contract SBTSale is
                     recipient: address(this)
                 })
             );
-        }
-
-        // Verify we received the exact SMP amount needed for the purchase
-        if (actualOut != requiredSMP) {
-            revert InvalidPaymentAmount(actualOut);
         }
     }
 
