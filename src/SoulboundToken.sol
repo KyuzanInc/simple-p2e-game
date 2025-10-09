@@ -33,6 +33,14 @@ contract SoulboundToken is
     /// @dev Revert when attempting a prohibited transfer or approval
     error Soulbound();
 
+    /// @dev Error for invalid base URI (empty string)
+    error InvalidBaseURI();
+
+    /// @dev Emitted when base URI is updated
+    /// @param oldBaseURI Previous base URI
+    /// @param newBaseURI New base URI
+    event BaseURIUpdated(string oldBaseURI, string newBaseURI);
+
     /// @notice Role identifier for accounts allowed to mint
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
 
@@ -99,7 +107,12 @@ contract SoulboundToken is
      * @param newBaseURI New base URI string for token metadata (e.g., "https://example.com/metadata/")
      */
     function setBaseURI(string memory newBaseURI) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (bytes(newBaseURI).length == 0) {
+            revert InvalidBaseURI();
+        }
+        string memory oldBaseURI = _baseTokenURI;
         _baseTokenURI = newBaseURI;
+        emit BaseURIUpdated(oldBaseURI, newBaseURI);
     }
 
     /// @notice Pause the contract (prevents minting)
