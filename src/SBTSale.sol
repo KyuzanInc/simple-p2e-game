@@ -189,11 +189,21 @@ contract SBTSale is
 
     /// @inheritdoc ISBTSale
     function getPOAS() external view returns (address poas) {
-        return IPOASMinter(_poasMinter).poas();
+        return _getPOAS();
     }
 
     /// @inheritdoc ISBTSale
     function getSMP() external view returns (address smp) {
+        return _getSMP();
+    }
+
+    /// @dev Internal helper to get POAS address (used by both public getter and internal checks)
+    function _getPOAS() internal view returns (address) {
+        return IPOASMinter(_poasMinter).poas();
+    }
+
+    /// @dev Internal helper to get SMP address (used by both public getter and internal checks)
+    function _getSMP() internal view returns (address) {
         return _smp;
     }
 
@@ -569,12 +579,12 @@ contract SBTSale is
 
     /// @dev Check if the token is POAS
     function _isPOAS(address paymentToken) internal view returns (bool) {
-        return paymentToken == IPOASMinter(_poasMinter).poas();
+        return paymentToken == _getPOAS();
     }
 
     /// @dev Check if the token is SMP
     function _isSMP(address paymentToken) internal view returns (bool) {
-        return paymentToken == _smp;
+        return paymentToken == _getSMP();
     }
 
     /// @dev Validate if the payment token is supported
