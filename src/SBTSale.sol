@@ -324,7 +324,6 @@ contract SBTSale is
     /// @inheritdoc ISBTSale
     function purchase(
         uint256[] calldata tokenIds,
-        address buyer,
         address paymentToken,
         uint256 amount,
         uint256 minRevenueOAS,
@@ -351,15 +350,10 @@ contract SBTSale is
             revert InvalidAddress(address(_sbtContract));
         }
 
-        // Verify buyer matches msg.sender first
-        if (msg.sender != buyer) {
-            revert BuyerMismatch(buyer, msg.sender);
-        }
-
         // Create purchase order for signature verification
         PurchaseOrder memory order = PurchaseOrder({
             purchaseId: purchaseId,
-            buyer: buyer,
+            buyer: msg.sender,
             tokenIds: tokenIds,
             paymentToken: paymentToken,
             amount: amount,
@@ -434,7 +428,6 @@ contract SBTSale is
     /// @inheritdoc ISBTSale
     function freePurchase(
         uint256[] calldata tokenIds,
-        address buyer,
         uint256 purchaseId,
         uint256 deadline,
         bytes calldata signature
@@ -448,9 +441,6 @@ contract SBTSale is
         if (address(_sbtContract) == address(0)) {
             revert InvalidAddress(address(_sbtContract));
         }
-        if (msg.sender != buyer) {
-            revert BuyerMismatch(buyer, msg.sender);
-        }
         if (usedPurchaseIds[purchaseId]) {
             revert PurchaseIdAlreadyUsed(purchaseId);
         }
@@ -460,7 +450,7 @@ contract SBTSale is
 
         FreePurchaseOrder memory order = FreePurchaseOrder({
             purchaseId: purchaseId,
-            buyer: buyer,
+            buyer: msg.sender,
             tokenIds: tokenIds,
             deadline: deadline
         });

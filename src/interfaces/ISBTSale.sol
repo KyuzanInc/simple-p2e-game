@@ -151,7 +151,6 @@ interface ISBTSale {
      * 10. Refunds excess payment tokens remaining from step 5 swap
      *
      * @param tokenIds Array of token IDs to mint from the configured SBT contract
-     * @param buyer Address of the authorized buyer (must match msg.sender)
      * @param paymentToken Token address for payment:
      *              - 0x0000000000000000000000000000000000000000 for native OAS
      *              - Dynamic addresses for POAS and SMP (must be registered)
@@ -161,11 +160,10 @@ interface ISBTSale {
      * @param minRevenueOAS Minimum OAS revenue that revenueRecipient should receive
      * @param purchaseId Globally unique purchase ID for replay protection
      * @param deadline Signature expiration timestamp
-     * @param signature Server signature for the purchase order
+     * @param signature Server signature for the purchase order (buyer is always msg.sender)
      */
     function purchase(
         uint256[] calldata tokenIds,
-        address buyer,
         address paymentToken,
         uint256 amount,
         uint256 minRevenueOAS,
@@ -181,14 +179,12 @@ interface ISBTSale {
      * server-issued signature for replay protection and access control.
      *
      * @param tokenIds Array of token IDs to mint from the configured SBT contract
-     * @param buyer Address of the authorized buyer (must match msg.sender)
      * @param purchaseId Globally unique purchase ID for replay protection
      * @param deadline Signature expiration timestamp
-     * @param signature Server signature for the free purchase order
+     * @param signature Server signature for the free purchase order (buyer is always msg.sender)
      */
     function freePurchase(
         uint256[] calldata tokenIds,
-        address buyer,
         uint256 purchaseId,
         uint256 deadline,
         bytes calldata signature

@@ -643,7 +643,7 @@ contract SBTSaleTest is Test {
 
         vm.deal(sender, amount);
         p2e.purchase{value: amount}(
-            tokenIds, sender, nativeOAS, amount, 0, purchaseId, deadline, signature
+            tokenIds, nativeOAS, amount, 0, purchaseId, deadline, signature
         );
 
         assertEq(sbtContract.ownerOf(tokenIds[0]), sender);
@@ -667,7 +667,7 @@ contract SBTSaleTest is Test {
         vm.deal(sender, amount);
         vm.expectRevert(ISBTSale.InvalidSignature.selector);
         p2e.purchase{value: amount}(
-            tokenIds, sender, nativeOAS, amount, 0, purchaseId, deadline, invalidSignature
+            tokenIds, nativeOAS, amount, 0, purchaseId, deadline, invalidSignature
         );
 
         vm.stopPrank();
@@ -694,7 +694,7 @@ contract SBTSaleTest is Test {
             )
         );
         p2e.purchase{value: amount}(
-            tokenIds, sender, nativeOAS, amount, 300, purchaseId, pastDeadline, signature
+            tokenIds, nativeOAS, amount, 300, purchaseId, pastDeadline, signature
         );
 
         vm.stopPrank();
@@ -715,7 +715,7 @@ contract SBTSaleTest is Test {
 
         vm.deal(sender, amount * 2);
         p2e.purchase{value: amount}(
-            tokenIds, sender, nativeOAS, amount, 0, purchaseId, deadline, signature
+            tokenIds, nativeOAS, amount, 0, purchaseId, deadline, signature
         );
 
         assertTrue(p2e.isUsedPurchaseId(purchaseId));
@@ -726,7 +726,7 @@ contract SBTSaleTest is Test {
 
         vm.expectRevert(abi.encodeWithSelector(ISBTSale.PurchaseIdAlreadyUsed.selector, purchaseId));
         p2e.purchase{value: amount}(
-            tokenIds, sender, nativeOAS, amount, 300, purchaseId, deadline, signature
+            tokenIds, nativeOAS, amount, 300, purchaseId, deadline, signature
         );
 
         vm.stopPrank();
@@ -748,11 +748,10 @@ contract SBTSaleTest is Test {
 
         vm.startPrank(sender);
         vm.deal(sender, amount);
-        vm.expectRevert(
-            abi.encodeWithSelector(ISBTSale.BuyerMismatch.selector, differentBuyer, sender)
-        );
+        // Buyer mismatch now results in InvalidSignature since buyer is embedded in signature
+        vm.expectRevert(ISBTSale.InvalidSignature.selector);
         p2e.purchase{value: amount}(
-            tokenIds, differentBuyer, nativeOAS, amount, 300, purchaseId, deadline, signature
+            tokenIds, nativeOAS, amount, 300, purchaseId, deadline, signature
         );
         vm.stopPrank();
     }
@@ -774,7 +773,7 @@ contract SBTSaleTest is Test {
         bytes memory signature = _signPurchaseOrder(order, signerPrivateKey);
 
         p2e.purchase{gas: purchaseGasLimit, value: paymentAmount}(
-            tokenIds, sender, nativeOAS, paymentAmount, 300, 1, block.timestamp + 1 hours, signature
+            tokenIds, nativeOAS, paymentAmount, 300, 1, block.timestamp + 1 hours, signature
         );
 
         _expect_minted_nfts(sender, tokenIds);
@@ -800,7 +799,6 @@ contract SBTSaleTest is Test {
 
         p2e.purchase{gas: purchaseGasLimit}(
             tokenIds,
-            sender,
             address(poas),
             paymentAmount,
             300,
@@ -831,7 +829,6 @@ contract SBTSaleTest is Test {
 
         p2e.purchase{gas: purchaseGasLimit}(
             tokenIds,
-            sender,
             address(smp),
             actualAmount,
             300,
@@ -911,7 +908,7 @@ contract SBTSaleTest is Test {
         vm.deal(sender, amount);
         vm.expectRevert(abi.encodeWithSelector(ISBTSale.InvalidAddress.selector, address(0)));
         testP2E.purchase{value: amount}(
-            tokenIds, sender, nativeOAS, amount, 300, 999, block.timestamp + 1 hours, signature
+            tokenIds, nativeOAS, amount, 300, 999, block.timestamp + 1 hours, signature
         );
         vm.stopPrank();
     }
@@ -933,7 +930,7 @@ contract SBTSaleTest is Test {
         vm.deal(sender, amount);
         vm.expectRevert(abi.encodeWithSelector(ISBTSale.TooManyItems.selector, 201, 200));
         p2e.purchase{value: amount}(
-            tokenIds, sender, nativeOAS, amount, 0, 998, block.timestamp + 1 hours, signature
+            tokenIds, nativeOAS, amount, 0, 998, block.timestamp + 1 hours, signature
         );
         vm.stopPrank();
     }
@@ -955,7 +952,7 @@ contract SBTSaleTest is Test {
             abi.encodeWithSelector(ISBTSale.InvalidPaymentToken.selector, invalidToken)
         );
         p2e.purchase(
-            tokenIds, sender, invalidToken, amount, 0, 997, block.timestamp + 1 hours, signature
+            tokenIds, invalidToken, amount, 0, 997, block.timestamp + 1 hours, signature
         );
         vm.stopPrank();
     }
@@ -979,7 +976,6 @@ contract SBTSaleTest is Test {
         vm.expectRevert(); // Could be BAL#507 or SlippageExceeded depending on order
         p2e.purchase{value: lowPaymentAmount}(
             tokenIds,
-            sender,
             nativeOAS,
             lowPaymentAmount,
             100,
@@ -1008,7 +1004,7 @@ contract SBTSaleTest is Test {
             abi.encodeWithSelector(ISBTSale.InvalidPaymentAmount.selector, overpayAmount)
         );
         p2e.purchase{value: overpayAmount}( // Sending wrong msg.value
-        tokenIds, sender, nativeOAS, amount, 0, 995, block.timestamp + 1 hours, signature);
+        tokenIds, nativeOAS, amount, 0, 995, block.timestamp + 1 hours, signature);
         vm.stopPrank();
     }
 
@@ -1030,7 +1026,7 @@ contract SBTSaleTest is Test {
             abi.encodeWithSelector(ISBTSale.InvalidPaymentAmount.selector, unexpectedValue)
         );
         p2e.purchase{value: unexpectedValue}( // Should not send msg.value for ERC20
-        tokenIds, sender, address(smp), amount, 0, 994, block.timestamp + 1 hours, signature);
+        tokenIds, address(smp), amount, 0, 994, block.timestamp + 1 hours, signature);
         vm.stopPrank();
     }
 
@@ -1076,7 +1072,6 @@ contract SBTSaleTest is Test {
 
         p2e.purchase{gas: purchaseGasLimit, value: paymentAmount}(
             tokenIds,
-            sender,
             nativeOAS,
             paymentAmount,
             300,
@@ -1117,7 +1112,6 @@ contract SBTSaleTest is Test {
 
         p2e.purchase{gas: purchaseGasLimit}(
             tokenIds,
-            sender,
             address(smp),
             actualAmount,
             300,
@@ -1157,7 +1151,7 @@ contract SBTSaleTest is Test {
 
         vm.deal(sender, amount);
         p2e.purchase{value: amount}(
-            tokenIds, sender, nativeOAS, amount, 0, 4000, block.timestamp + 1 hours, signature
+            tokenIds, nativeOAS, amount, 0, 4000, block.timestamp + 1 hours, signature
         );
 
         // Verify all NFTs were minted
@@ -1182,7 +1176,7 @@ contract SBTSaleTest is Test {
 
         vm.deal(sender, exactAmount);
         p2e.purchase{value: exactAmount}(
-            tokenIds, sender, nativeOAS, exactAmount, 0, 4201, block.timestamp + 1 hours, signature
+            tokenIds, nativeOAS, exactAmount, 0, 4201, block.timestamp + 1 hours, signature
         );
 
         assertEq(sbtContract.ownerOf(tokenIds[0]), sender);
@@ -1205,7 +1199,6 @@ contract SBTSaleTest is Test {
         vm.deal(sender, maxAmount);
         p2e.purchase{value: maxAmount}(
             tokenIds,
-            sender,
             nativeOAS,
             maxAmount,
             10_000,
@@ -1232,7 +1225,7 @@ contract SBTSaleTest is Test {
 
         vm.deal(sender, amount);
         p2e.purchase{value: amount}(
-            tokenIds, sender, nativeOAS, amount, 0, 4203, deadline, signature
+            tokenIds, nativeOAS, amount, 0, 4203, deadline, signature
         );
 
         assertEq(sbtContract.ownerOf(tokenIds[0]), sender);
@@ -1273,7 +1266,6 @@ contract SBTSaleTest is Test {
         vm.expectRevert();
         p2e.purchase{value: amount}(
             tokenIds,
-            sender,
             nativeOAS,
             amount,
             unrealisticMinRevenue,
@@ -1309,7 +1301,7 @@ contract SBTSaleTest is Test {
         bytes memory signature = _signFreePurchaseOrder(order, signerPrivateKey);
 
         _expect_free_purchased_event(sender, tokenIds, purchaseId);
-        p2e.freePurchase(tokenIds, sender, purchaseId, deadline, signature);
+        p2e.freePurchase(tokenIds, purchaseId, deadline, signature);
 
         _expect_minted_nfts(sender, tokenIds);
         assertTrue(p2e.isUsedPurchaseId(purchaseId));
@@ -1330,7 +1322,7 @@ contract SBTSaleTest is Test {
         bytes memory invalidSignature = _signFreePurchaseOrder(order, wrongPrivateKey);
 
         vm.expectRevert(ISBTSale.InvalidSignature.selector);
-        p2e.freePurchase(tokenIds, sender, purchaseId, deadline, invalidSignature);
+        p2e.freePurchase(tokenIds, purchaseId, deadline, invalidSignature);
         vm.stopPrank();
     }
 
@@ -1352,7 +1344,7 @@ contract SBTSaleTest is Test {
                 ISBTSale.ExpiredDeadline.selector, deadline, currentTimestamp
             )
         );
-        p2e.freePurchase(tokenIds, sender, purchaseId, deadline, signature);
+        p2e.freePurchase(tokenIds, purchaseId, deadline, signature);
         vm.stopPrank();
     }
 
@@ -1369,12 +1361,12 @@ contract SBTSaleTest is Test {
         bytes memory signature = _signFreePurchaseOrder(order, signerPrivateKey);
 
         _expect_free_purchased_event(sender, tokenIds, purchaseId);
-        p2e.freePurchase(tokenIds, sender, purchaseId, deadline, signature);
+        p2e.freePurchase(tokenIds, purchaseId, deadline, signature);
 
         assertTrue(p2e.isUsedPurchaseId(purchaseId));
 
         vm.expectRevert(abi.encodeWithSelector(ISBTSale.PurchaseIdAlreadyUsed.selector, purchaseId));
-        p2e.freePurchase(tokenIds, sender, purchaseId, deadline, signature);
+        p2e.freePurchase(tokenIds, purchaseId, deadline, signature);
         vm.stopPrank();
     }
 
@@ -1391,10 +1383,9 @@ contract SBTSaleTest is Test {
             _createFreePurchaseOrder(purchaseId, differentBuyer, tokenIds, deadline);
         bytes memory signature = _signFreePurchaseOrder(order, signerPrivateKey);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(ISBTSale.BuyerMismatch.selector, differentBuyer, sender)
-        );
-        p2e.freePurchase(tokenIds, differentBuyer, purchaseId, deadline, signature);
+        // Buyer mismatch now results in InvalidSignature since buyer is embedded in signature
+        vm.expectRevert(ISBTSale.InvalidSignature.selector);
+        p2e.freePurchase(tokenIds, purchaseId, deadline, signature);
         vm.stopPrank();
     }
 
@@ -1414,7 +1405,7 @@ contract SBTSaleTest is Test {
         bytes memory signature = _signFreePurchaseOrder(order, signerPrivateKey);
 
         vm.expectRevert(abi.encodeWithSelector(ISBTSale.TooManyItems.selector, 201, 200));
-        p2e.freePurchase(tokenIds, sender, purchaseId, deadline, signature);
+        p2e.freePurchase(tokenIds, purchaseId, deadline, signature);
         vm.stopPrank();
     }
 
@@ -1478,7 +1469,7 @@ contract SBTSaleTest is Test {
         bytes memory signature = abi.encodePacked(r, s, v);
 
         vm.expectRevert(abi.encodeWithSelector(ISBTSale.InvalidAddress.selector, address(0)));
-        testP2E.freePurchase(tokenIds, sender, purchaseId, deadline, signature);
+        testP2E.freePurchase(tokenIds, purchaseId, deadline, signature);
         vm.stopPrank();
     }
 
@@ -1533,7 +1524,7 @@ contract SBTSaleTest is Test {
         vm.deal(sender, amount);
         vm.expectRevert(ISBTSale.InvalidSignature.selector);
         p2e.purchase{value: amount}(
-            tokenIds, sender, nativeOAS, amount, 0, 4204, block.timestamp + 1 hours, signature
+            tokenIds, nativeOAS, amount, 0, 4204, block.timestamp + 1 hours, signature
         );
         vm.stopPrank();
     }
