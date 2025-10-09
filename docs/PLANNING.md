@@ -212,22 +212,78 @@ OZ ライブラリを `^5.0.1` のような範囲指定で導入しており、�
 
 コード内に冗長な処理・重複チェック・イベント不足などの軽微な問題が複数存在します。
 
-### 改善方針
+### S5.1：`buyer` 引数の削除
 
-- `buyer` 引数を削除し、`msg.sender` に統一
-- `_swap` の `deadline` を削除または実効化（TWAP と併用を検討）
-- `_getTotalSMPPrice()` の重複チェック削除
-- `_payWithSwapToSMP()` の `if (actualOut != requiredSMP)` チェックを削除（`_swap()` で検証済み）
-- `setBaseURI()` に `BaseURIUpdated(old, new)` を追加
-- `SoulboundToken.setBaseURI()` に空文字列チェックを追加
-- `setSigner` / `setSBTContract` に同値チェックを導入（同値なら no-op）
-- `type(IFace).interfaceId` を使用してマジック値を排除
-- `_isPOAS()` / `_isSMP()` を `getPOAS()` / `getSMP()` に依存させてコード重複を削減
-- `_getPoolAssets()` の結果を immutable 化（コスト削減）
+- **対象**: `purchase()` 関数など
+- **変更**: `buyer` 引数を削除し、`msg.sender` に統一
+- **理由**: 引数として受け取る必要がなく、常に `msg.sender` を使用すべき
+
+### S5.2：`_swap` の `deadline` パラメータ
+
+- **対象**: `_swap()` 関数
+- **変更**: `deadline` を削除または実効化（TWAP と併用を検討）
+- **理由**: 現在使用されていない、または適切に設定されていない
+
+### S5.3：`_getTotalSMPPrice()` の重複チェック削除
+
+- **対象**: `_getTotalSMPPrice()` 関数
+- **変更**: 重複している検証ロジックを削除
+- **理由**: 同じチェックが他の場所で既に実行されている
+
+### S5.4：`_payWithSwapToSMP()` の冗長チェック削除
+
+- **対象**: `_payWithSwapToSMP()` 関数
+- **変更**: `if (actualOut != requiredSMP)` チェックを削除
+- **理由**: `_swap()` 内で既に検証済み
+
+### S5.5：`setBaseURI()` のイベント追加
+
+- **対象**: `SoulboundToken.setBaseURI()` 関数
+- **変更**: `BaseURIUpdated(old, new)` イベントを追加
+- **理由**: 重要な状態変更を監視可能にする
+
+### S5.6：`setBaseURI()` の空文字列チェック
+
+- **対象**: `SoulboundToken.setBaseURI()` 関数
+- **変更**: 空文字列を拒否するバリデーションを追加
+- **理由**: 無効な baseURI の設定を防止
+
+### S5.7：setter 関数の同値チェック
+
+- **対象**: `setSigner()`, `setSBTContract()` 関数
+- **変更**: 同じ値が設定される場合は no-op とする
+- **理由**: 不要なイベント発行やガス消費を防止
+
+### S5.8：マジック値の排除（対応済み）
+
+- **対象**: インターフェース ID を使用している箇所
+- **変更**: `type(IFace).interfaceId` を使用してマジック値を排除
+- **理由**: コードの可読性と保守性の向上
+- **状態**: ✅ 既に対応済み（`setSBTContract()`で`type(ISBTSaleERC721).interfaceId`を使用中）
+
+### S5.9：`_isPOAS()` / `_isSMP()` のリファクタリング
+
+- **対象**: `_isPOAS()`, `_isSMP()` 関数
+- **変更**: `getPOAS()` / `getSMP()` に依存させてコード重複を削減
+- **理由**: DRY 原則に従い、重複コードを削減
+
+### S5.10：`_getPoolAssets()` の最適化
+
+- **対象**: `_getPoolAssets()` 関数
+- **変更**: 結果を immutable 変数に保存
+- **理由**: ガスコスト削減
 
 ### 想定コミット
 
-- `refactor: cleanup redundant checks and add missing events`
+各項目を個別にコミット、または関連する変更をまとめてコミット：
+- `refactor: remove buyer argument and use msg.sender` (S5.1)
+- `refactor: handle deadline in _swap` (S5.2)
+- `refactor: remove redundant checks` (S5.3, S5.4)
+- `feat: add BaseURIUpdated event and validation` (S5.5, S5.6)
+- `refactor: add no-op checks to setters` (S5.7)
+- ~~`refactor: use type().interfaceId instead of magic values` (S5.8)~~ → スキップ（既に対応済み）
+- `refactor: reduce code duplication in token checks` (S5.9)
+- `refactor: optimize _getPoolAssets with immutable` (S5.10)
 
 ---
 
