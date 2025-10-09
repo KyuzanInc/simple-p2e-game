@@ -885,6 +885,37 @@ contract SBTSaleTest is Test {
         assertEq(smp.balanceOf(sender), userInitialBalance - actualAmount);
     }
 
+    function test_purchase_SMP_overpayment() public {
+        vm.startPrank(sender);
+
+        uint256 requiredAmount = totalSMPPrice;
+        uint256 overpaymentAmount = requiredAmount + 10 ether; // Paying more than required
+        smp.approve(p2eAddr, overpaymentAmount);
+
+        uint256[] memory tokenIds = new uint256[](3);
+        tokenIds[0] = 19;
+        tokenIds[1] = 20;
+        tokenIds[2] = 21;
+
+        ISBTSale.PurchaseOrder memory order = _createPurchaseOrder(
+            6, sender, tokenIds, address(smp), overpaymentAmount, 300, block.timestamp + 1 hours
+        );
+        bytes memory signature = _signPurchaseOrder(order, signerPrivateKey);
+
+        vm.expectRevert(abi.encodeWithSelector(ISBTSale.InvalidPaymentAmount.selector, overpaymentAmount));
+        p2e.purchase{gas: purchaseGasLimit}(
+            tokenIds,
+            address(smp),
+            overpaymentAmount,
+            300,
+            6,
+            block.timestamp + 1 hours,
+            signature
+        );
+
+        vm.stopPrank();
+    }
+
     // =============================================================
     //                PURCHASE ERROR TESTS
     // =============================================================
