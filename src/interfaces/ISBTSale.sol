@@ -26,8 +26,8 @@ interface ISBTSale {
         address buyer;
         uint256[] tokenIds;
         address paymentToken;
-        uint256 amount;
-        uint256 maxSlippageBps; // Maximum slippage in basis points (1 BPS = 0.01%)
+        uint256 amount; // Amount including slippage tolerance (calculated off-chain)
+        uint256 minRevenueOAS; // Minimum OAS revenue that revenueRecipient should receive
         uint256 deadline;
     }
 
@@ -40,23 +40,25 @@ interface ISBTSale {
     }
 
     // Errors
-    error InvalidPaymentToken(); // 0x56e7ec5f
-    error InvalidRecipient(); // 0x9c8d2cd2
-    error InvalidPaymentAmount(); // 0xfc512fde
-    error InvalidProtocolValue(); // 0x3c88b7e9
-    error InvalidPool(); // 0x2083cd40
-    error InvalidAddress(); // 0xe6c4247b
-    error InvalidSwap(string message); // 0x3bea1958
-    error NoItems(); // 0x0483ac36
-    error TooManyItems(); // 0x1f645e1a
-    error ArrayLengthMismatch(); // 0xa24a13a6
-    error TransferFailed(); // 0x90b8ec18
-    error InvalidSignature(); // 0x8baa579f
-    error ExpiredDeadline(); // 0x3a5c06d1
-    error PurchaseIdAlreadyUsed(); // 0x715018a6
-    error InvalidSigner(); // 0xafb5b3b8
-    error BuyerMismatch(); // 0x892b78e2
-    error SlippageExceeded(); // Slippage tolerance exceeded
+    error InvalidPaymentToken(address token); // Invalid or unsupported payment token
+    error InvalidRecipient(address recipient); // Invalid recipient address (zero address or other constraint violation)
+    error InvalidPaymentAmount(uint256 amount); // Payment amount does not match expected value
+    error InvalidProtocolValue(string parameter); // Invalid protocol parameter value
+    error InvalidPool(); // Invalid liquidity pool configuration
+    error InvalidAddress(address addr); // Invalid address provided
+    error InvalidSwap(string message); // Swap operation failed with detailed message
+    error NoItems(); // No items specified for operation
+    error TooManyItems(uint256 count, uint256 maxAllowed); // Item count exceeds maximum allowed
+    error ArrayLengthMismatch(uint256 length1, uint256 length2); // Array length mismatch between parameters
+    error TransferFailed(address token, address to, uint256 amount); // Token transfer failed
+    error InvalidSignature(); // Signature verification failed
+    error ExpiredDeadline(uint256 deadline, uint256 currentTime); // Signature deadline has expired
+    error PurchaseIdAlreadyUsed(uint256 purchaseId); // Purchase ID has already been used
+    error InvalidSigner(address signer); // Signer address is invalid or not set
+    error BuyerMismatch(address expected, address actual); // Buyer address does not match authorized buyer
+    error InsufficientRevenue(uint256 minRequired, uint256 actual); // Revenue recipient would receive less than minimum
+    error InsufficientBPTReceived(uint256 received); // Liquidity provision resulted in zero or insufficient BPT
+    error OwnershipCannotBeRenounced(); // Ownership renouncement is disabled to prevent accidental loss of control
 
     // Events
     /// @dev Emitted when SBTs are purchased with complete protocol information
@@ -130,7 +132,8 @@ interface ISBTSale {
      * 1. User initiates payment with server-signed parameters:
      *    - Array of token IDs to mint from the configured SBT contract
      *    - Payment token address (ERC20.approve required for non-native OAS)
-     *    - Payment amount in the specified token (not SMP amount)
+     *    - Payment amount in the specified token (includes slippage tolerance, calculated off-chain)
+     *    - Minimum revenue OAS amount for protocol revenue recipient
      *    - Server signature for authorization
      *    - Excess payments are refunded using the same token type
      * 2. Verifies server signature against purchase order data
@@ -140,29 +143,30 @@ interface ISBTSale {
      * 5. For non-SMP payments, swaps to required SMP amount using LP.
      *    Excess payment tokens are refunded at this stage.
      * 6. Burns SMP at pre-configured ratio
-     * 7. Provides SMP to LP at pre-configured ratio
+     * 7. Provides SMP to LP at pre-configured ratio (ensures BPT > 0)
      *    - LP tokens are sent to pre-configured dedicated address
      * 8. Swaps remaining SMP to OAS via LP and sends to pre-configured address
+     *    - Validates that revenue OAS meets minimum threshold
      * 9. Mints and transfers SBTs to msg.sender
      * 10. Refunds excess payment tokens remaining from step 5 swap
      *
      * @param tokenIds Array of token IDs to mint from the configured SBT contract
-     * @param buyer Address of the authorized buyer (must match msg.sender)
      * @param paymentToken Token address for payment:
      *              - 0x0000000000000000000000000000000000000000 for native OAS
      *              - Dynamic addresses for POAS and SMP (must be registered)
      * @param amount Total payment amount in the specified token for all SBTs.
-     *               Note: Obtain this value beforehand using queryPrice.
+     *               This amount includes slippage tolerance and is calculated off-chain.
+     *               Note: Obtain the base price using queryPrice and apply slippage tolerance.
+     * @param minRevenueOAS Minimum OAS revenue that revenueRecipient should receive
      * @param purchaseId Globally unique purchase ID for replay protection
      * @param deadline Signature expiration timestamp
-     * @param signature Server signature for the purchase order
+     * @param signature Server signature for the purchase order (buyer is always msg.sender)
      */
     function purchase(
         uint256[] calldata tokenIds,
-        address buyer,
         address paymentToken,
         uint256 amount,
-        uint256 maxSlippageBps,
+        uint256 minRevenueOAS,
         uint256 purchaseId,
         uint256 deadline,
         bytes calldata signature
@@ -175,14 +179,12 @@ interface ISBTSale {
      * server-issued signature for replay protection and access control.
      *
      * @param tokenIds Array of token IDs to mint from the configured SBT contract
-     * @param buyer Address of the authorized buyer (must match msg.sender)
      * @param purchaseId Globally unique purchase ID for replay protection
      * @param deadline Signature expiration timestamp
-     * @param signature Server signature for the free purchase order
+     * @param signature Server signature for the free purchase order (buyer is always msg.sender)
      */
     function freePurchase(
         uint256[] calldata tokenIds,
-        address buyer,
         uint256 purchaseId,
         uint256 deadline,
         bytes calldata signature

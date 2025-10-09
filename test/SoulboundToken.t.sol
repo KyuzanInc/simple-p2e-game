@@ -13,6 +13,7 @@ import {ITransparentUpgradeableProxy} from
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 import {SoulboundToken} from "../src/SoulboundToken.sol";
+import {ISBTSaleERC721} from "../src/interfaces/ISBTSaleERC721.sol";
 
 contract SoulboundTokenTest is Test {
     SoulboundToken sbt;
@@ -74,6 +75,14 @@ contract SoulboundTokenTest is Test {
         assertEq(sbt.mintTimeOf(1), block.timestamp);
     }
 
+    function test_mintTimeOf_nonexistentToken() public {
+        uint256 nonexistentTokenId = 999;
+        vm.expectRevert(
+            abi.encodeWithSelector(IERC721Errors.ERC721NonexistentToken.selector, nonexistentTokenId)
+        );
+        sbt.mintTimeOf(nonexistentTokenId);
+    }
+
     function test_safeMint_restricted() public {
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -110,6 +119,7 @@ contract SoulboundTokenTest is Test {
     function test_supportsInterface() public view {
         assertTrue(sbt.supportsInterface(type(IAccessControl).interfaceId));
         assertTrue(sbt.supportsInterface(type(IERC721).interfaceId));
+        assertTrue(sbt.supportsInterface(type(ISBTSaleERC721).interfaceId));
         assertFalse(sbt.supportsInterface(0x12345678));
     }
 
@@ -246,5 +256,43 @@ contract SoulboundTokenTest is Test {
         assertEq(sbt.tokenOfOwnerByIndex(user, 0), 10);
         assertEq(sbt.tokenOfOwnerByIndex(user, 1), 20);
         assertEq(sbt.tokenOfOwnerByIndex(minter, 0), 30);
+    }
+
+    // Branch coverage tests
+
+    function test_initialize_zeroAddressOwner() public {
+        SoulboundToken newImpl = new SoulboundToken();
+        vm.expectRevert(SoulboundToken.InvalidOwner.selector);
+        new TransparentUpgradeableProxy(
+            address(newImpl),
+            address(this),
+            abi.encodeWithSelector(
+                SoulboundToken.initialize.selector, "Soulbound", "SBT", BASE_URI, address(0)
+            )
+        );
+    }
+
+    function test_setBaseURI_emptyString() public {
+        vm.prank(owner);
+        vm.expectRevert(SoulboundToken.InvalidBaseURI.selector);
+        sbt.setBaseURI("");
+    }
+
+    function test_setBaseURI_unauthorized() public {
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector, user, DEFAULT_ADMIN_ROLE
+            )
+        );
+        vm.prank(user);
+        sbt.setBaseURI("https://new/");
+    }
+
+    function test_setBaseURI_emitsEvent() public {
+        string memory newURI = "https://new/";
+        vm.expectEmit(true, true, true, true);
+        emit SoulboundToken.BaseURIUpdated(BASE_URI, newURI);
+        vm.prank(owner);
+        sbt.setBaseURI(newURI);
     }
 }

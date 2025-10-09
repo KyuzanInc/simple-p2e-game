@@ -137,7 +137,6 @@ contract PurchaseWithSMP is Script {
     function executePurchase(
         SBTSale sbtSale,
         uint256[] memory tokenIds,
-        address buyer,
         address paymentToken,
         uint256 amount,
         uint256 maxSlippageBps,
@@ -148,7 +147,7 @@ contract PurchaseWithSMP is Script {
         IERC20 smp = IERC20(paymentToken);
 
         try sbtSale.purchase(
-            tokenIds, buyer, paymentToken, amount, maxSlippageBps, purchaseId, deadline, signature
+            tokenIds, paymentToken, amount, maxSlippageBps, purchaseId, deadline, signature
         ) {
             console.log("Purchase successful!");
             console.log("NFTs minted:", tokenIds.length);

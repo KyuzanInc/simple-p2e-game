@@ -33,6 +33,14 @@ contract SoulboundToken is
     /// @dev Revert when attempting a prohibited transfer or approval
     error Soulbound();
 
+    /// @dev Error for invalid base URI (empty string)
+    error InvalidBaseURI();
+
+    /// @dev Emitted when base URI is updated
+    /// @param oldBaseURI Previous base URI
+    /// @param newBaseURI New base URI
+    event BaseURIUpdated(string oldBaseURI, string newBaseURI);
+
     /// @notice Role identifier for accounts allowed to mint
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
 
@@ -93,9 +101,18 @@ contract SoulboundToken is
         _mintedAt[tokenId] = block.timestamp;
     }
 
-    /// @notice Update base URI for token metadata
+    /**
+     * @notice Update base URI for token metadata
+     * @dev Only accounts with DEFAULT_ADMIN_ROLE can update the base URI
+     * @param newBaseURI New base URI string for token metadata (e.g., "https://example.com/metadata/")
+     */
     function setBaseURI(string memory newBaseURI) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (bytes(newBaseURI).length == 0) {
+            revert InvalidBaseURI();
+        }
+        string memory oldBaseURI = _baseTokenURI;
         _baseTokenURI = newBaseURI;
+        emit BaseURIUpdated(oldBaseURI, newBaseURI);
     }
 
     /// @notice Pause the contract (prevents minting)
@@ -108,8 +125,15 @@ contract SoulboundToken is
         _unpause();
     }
 
-    /// @notice View mint timestamp of a token
+    /**
+     * @notice View mint timestamp of a token
+     * @dev Returns the block timestamp when the token was minted
+     *      Reverts with ERC721NonexistentToken if the token does not exist
+     * @param tokenId Token ID to query the mint timestamp for
+     * @return Timestamp when the token was minted (block.timestamp at mint time)
+     */
     function mintTimeOf(uint256 tokenId) external view returns (uint256) {
+        _requireOwned(tokenId);
         return _mintedAt[tokenId];
     }
 
@@ -142,7 +166,8 @@ contract SoulboundToken is
         override(ERC721Upgradeable, ERC721EnumerableUpgradeable, AccessControlUpgradeable, IERC165)
         returns (bool)
     {
-        return super.supportsInterface(interfaceId);
+        return
+            interfaceId == type(ISBTSaleERC721).interfaceId || super.supportsInterface(interfaceId);
     }
 
     // ---------------------------------------------------------------------
