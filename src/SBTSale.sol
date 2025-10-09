@@ -410,6 +410,11 @@ contract SBTSale is
         // Calculate total SMP price required for all NFTs
         data.requiredSMP = _getTotalSMPPrice(tokenIds.length);
 
+        // For SMP payment, enforce exact amount to prevent overpayment
+        if (_isSMP(paymentToken) && amount != data.requiredSMP) {
+            revert InvalidPaymentAmount(amount);
+        }
+
         // Swap payment token to SMP
         data.actualAmount = _payWithSwapToSMP(paymentToken, amount, data.requiredSMP);
         data.refundAmount = amount - data.actualAmount;
