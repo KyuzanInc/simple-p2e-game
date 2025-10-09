@@ -257,4 +257,42 @@ contract SoulboundTokenTest is Test {
         assertEq(sbt.tokenOfOwnerByIndex(user, 1), 20);
         assertEq(sbt.tokenOfOwnerByIndex(minter, 0), 30);
     }
+
+    // Branch coverage tests
+
+    function test_initialize_zeroAddressOwner() public {
+        SoulboundToken newImpl = new SoulboundToken();
+        vm.expectRevert(SoulboundToken.InvalidOwner.selector);
+        new TransparentUpgradeableProxy(
+            address(newImpl),
+            address(this),
+            abi.encodeWithSelector(
+                SoulboundToken.initialize.selector, "Soulbound", "SBT", BASE_URI, address(0)
+            )
+        );
+    }
+
+    function test_setBaseURI_emptyString() public {
+        vm.prank(owner);
+        vm.expectRevert(SoulboundToken.InvalidBaseURI.selector);
+        sbt.setBaseURI("");
+    }
+
+    function test_setBaseURI_unauthorized() public {
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector, user, DEFAULT_ADMIN_ROLE
+            )
+        );
+        vm.prank(user);
+        sbt.setBaseURI("https://new/");
+    }
+
+    function test_setBaseURI_emitsEvent() public {
+        string memory newURI = "https://new/";
+        vm.expectEmit(true, true, true, true);
+        emit SoulboundToken.BaseURIUpdated(BASE_URI, newURI);
+        vm.prank(owner);
+        sbt.setBaseURI(newURI);
+    }
 }

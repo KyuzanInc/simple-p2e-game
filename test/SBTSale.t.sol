@@ -357,6 +357,28 @@ contract SBTSaleTest is Test {
         vm.stopPrank();
     }
 
+    function test_setSigner_noOp() public {
+        vm.startPrank(deployer);
+
+        // Get current signer
+        address currentSigner = p2e.getSigner();
+
+        // Record logs to verify no event is emitted
+        vm.recordLogs();
+
+        // Set the same signer (should be a no-op)
+        p2e.setSigner(currentSigner);
+
+        // Verify no events were emitted
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        assertEq(logs.length, 0, "No events should be emitted for no-op");
+
+        // Verify signer hasn't changed
+        assertEq(p2e.getSigner(), currentSigner);
+
+        vm.stopPrank();
+    }
+
     function test_getSigner() public view {
         assertEq(p2e.getSigner(), signerAddress);
     }
@@ -456,6 +478,28 @@ contract SBTSaleTest is Test {
         address invalidContract = address(woas);
         vm.expectRevert(abi.encodeWithSelector(ISBTSale.InvalidAddress.selector, invalidContract));
         p2e.setSBTContract(ISBTSaleERC721(invalidContract));
+
+        vm.stopPrank();
+    }
+
+    function test_setSBTContract_noOp() public {
+        vm.startPrank(deployer);
+
+        // Get current SBT contract
+        ISBTSaleERC721 currentContract = p2e.getSBTContract();
+
+        // Record logs to verify no event is emitted
+        vm.recordLogs();
+
+        // Set the same contract (should be a no-op)
+        p2e.setSBTContract(currentContract);
+
+        // Verify no events were emitted
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        assertEq(logs.length, 0, "No events should be emitted for no-op");
+
+        // Verify contract hasn't changed
+        assertEq(address(p2e.getSBTContract()), address(currentContract));
 
         vm.stopPrank();
     }
@@ -1499,6 +1543,83 @@ contract SBTSaleTest is Test {
         });
         assertEq(maxRatioContract.getSMPBurnRatio(), 7000);
         assertEq(maxRatioContract.getSMPLiquidityRatio(), 3000);
+    }
+
+    function test_purchase_zeroRevenue() public {
+        // Deploy a contract with 100% burn+liquidity (0% revenue)
+        vm.startPrank(deployer);
+        SBTSale implementation = new SBTSale({
+            poasMinter: address(poasMinter),
+            liquidityPool: address(pool),
+            lpRecipient: lpRecipient,
+            revenueRecipient: revenueRecipient,
+            smpBasePrice: smpBasePrice,
+            smpBurnRatio: 6000,
+            smpLiquidityRatio: 4000
+        });
+
+        bytes memory initData = abi.encodeWithSelector(SBTSale.initialize.selector, deployer);
+        address testP2EAddr =
+            address(new TransparentUpgradeableProxy(address(implementation), deployer, initData));
+        ISBTSale testP2E = ISBTSale(testP2EAddr);
+
+        // Create new SBT contract for this test
+        MockSBTSaleERC721 testSBT = new MockSBTSaleERC721("TestSBT", "TSBT", testP2EAddr);
+        testP2E.setSBTContract(ISBTSaleERC721(address(testSBT)));
+        testP2E.setSigner(signerAddress);
+        vm.stopPrank();
+
+        vm.startPrank(sender);
+        uint256[] memory tokenIds = new uint256[](1);
+        tokenIds[0] = 7001;
+        uint256 amount = testP2E.queryPrice(1, nativeOAS);
+
+        ISBTSale.PurchaseOrder memory order = ISBTSale.PurchaseOrder({
+            purchaseId: 7001,
+            buyer: sender,
+            tokenIds: tokenIds,
+            paymentToken: nativeOAS,
+            amount: amount,
+            minRevenueOAS: 0,
+            deadline: block.timestamp + 1 hours
+        });
+
+        bytes32 structHash = keccak256(
+            abi.encode(
+                keccak256(
+                    "PurchaseOrder(uint256 purchaseId,address buyer,uint256[] tokenIds,address paymentToken,uint256 amount,uint256 minRevenueOAS,uint256 deadline)"
+                ),
+                order.purchaseId,
+                order.buyer,
+                keccak256(abi.encode(order.tokenIds)),
+                order.paymentToken,
+                order.amount,
+                order.minRevenueOAS,
+                order.deadline
+            )
+        );
+        bytes32 domainSeparator = keccak256(
+            abi.encode(
+                keccak256(
+                    "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
+                ),
+                keccak256(bytes("SBTSale")),
+                keccak256(bytes("1")),
+                block.chainid,
+                testP2EAddr
+            )
+        );
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPrivateKey, digest);
+        bytes memory signature = abi.encodePacked(r, s, v);
+
+        vm.deal(sender, amount);
+        testP2E.purchase{value: amount}(
+            tokenIds, nativeOAS, amount, 0, 7001, block.timestamp + 1 hours, signature
+        );
+
+        assertEq(testSBT.ownerOf(tokenIds[0]), sender);
+        vm.stopPrank();
     }
 
     function test_signer_noSignerSet() public {
