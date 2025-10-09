@@ -92,6 +92,8 @@ contract SBTSale is
     uint256 private immutable _smpBasePrice;
     uint256 private immutable _smpBurnRatio;
     uint256 private immutable _smpLiquidityRatio;
+    uint8 private immutable _woasPoolIndex;
+    uint8 private immutable _smpPoolIndex;
 
     // Signature verification state
     address private _signer;
@@ -158,6 +160,11 @@ contract SBTSale is
         _smpBurnRatio = smpBurnRatio;
         _smpLiquidityRatio = smpLiquidityRatio;
         _smpBasePrice = smpBasePrice;
+
+        // Calculate pool indices based on Balancer V2 address ordering
+        // These are immutable and save gas on repeated _getPoolAssets() calls
+        _woasPoolIndex = woas < smp ? 0 : 1;
+        _smpPoolIndex = _woasPoolIndex ^ 1; // 0->1, 1->0
 
         _disableInitializers();
     }
@@ -602,9 +609,9 @@ contract SBTSale is
         returns (IAsset[] memory assets, uint8 woasPoolIndex, uint8 smpPoolIndex)
     {
         assets = new IAsset[](2);
-        // Pool structure follows Balancer V2 address ordering requirement
-        woasPoolIndex = _woas < _smp ? 0 : 1;
-        smpPoolIndex = woasPoolIndex ^ 1; // 0->1, 1->0
+        // Use pre-calculated immutable pool indices for gas efficiency
+        woasPoolIndex = _woasPoolIndex;
+        smpPoolIndex = _smpPoolIndex;
 
         // Always return WOAS and SMP addresses
         // Caller will replace with ETH sentinel (address(0)) if needed for OAS/POAS operations
