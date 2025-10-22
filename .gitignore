@@ -8,6 +8,7 @@ node_modules/
 
 # Dotenv file
 .env
+.envrc
 
 # Dotenvrc file
 .envrc*

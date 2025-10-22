@@ -40,8 +40,12 @@ forge fmt
 npm run script:GenerateDeployers
 
 # Deploy contracts (requires environment configuration)
-forge script script/DeploySoulboundToken.s.sol --rpc-url $RPC_URL --broadcast
-forge script script/DeploySBTSale.s.sol --rpc-url $RPC_URL --broadcast
+forge script script/DeploySoulboundToken.s.sol --rpc-url $RPC_URL --broadcast --private-key $PRIVATE_KEY
+forge script script/DeploySBTSale.s.sol --rpc-url $RPC_URL --broadcast --private-key $PRIVATE_KEY
+
+# Deploy with Fireblocks (for production - see docs/FIREBLOCKS_DEPLOYMENT.md)
+fireblocks-json-rpc --http -- forge script script/DeploySoulboundToken.s.sol:DeploySoulboundToken --sender $DEPLOYER_ADDRESS --slow --broadcast --unlocked --rpc-url {}
+fireblocks-json-rpc --http -- forge script script/DeploySBTSale.s.sol:DeploySBTSale --sender $DEPLOYER_ADDRESS --slow --broadcast --unlocked --rpc-url {}
 ```
 
 ## Architecture Overview
@@ -81,9 +85,18 @@ forge script script/DeploySBTSale.s.sol --rpc-url $RPC_URL --broadcast
 ### Deployment Configuration
 
 Environment variables required (see `.envrc.sample`):
-- Network configuration: `RPC_URL`, `PRIVATE_KEY`
+- Network configuration: `RPC_URL`, `PRIVATE_KEY` (or Fireblocks credentials)
 - SBT parameters: name, symbol, base URI, admin address
 - SBTSale parameters: liquidity pool, recipients, pricing, ratios
+
+For production deployments, Fireblocks integration is available for secure key management. See `docs/FIREBLOCKS_DEPLOYMENT.md` for detailed configuration and usage instructions.
+
+**Fireblocks Environment Variables (Optional):**
+- `FIREBLOCKS_API_KEY`: Fireblocks API key (UUID format)
+- `FIREBLOCKS_API_PRIVATE_KEY_PATH`: Path to Fireblocks API secret key file
+- `FIREBLOCKS_VAULT_ACCOUNT_IDS`: Vault account ID(s)
+- `FIREBLOCKS_CHAIN_ID`: Chain ID (248 for Oasys Mainnet, 9372 for Testnet)
+- `DEPLOYER_ADDRESS`: Deployer address from Fireblocks vault account
 
 ### Key Design Patterns
 
