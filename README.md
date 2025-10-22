@@ -80,6 +80,27 @@ This project supports two deployment methods:
 1. **Fireblocks Deployment (Recommended for Production)** - Enterprise-grade security with Fireblocks
 2. **Standard Deployment** - Direct private key deployment for development
 
+### Environment Setup
+
+The project uses environment-specific configuration files:
+
+```bash
+# Setup environment configuration
+npm run env:setup:testnet   # Create .envrc.testnet from sample
+npm run env:setup:mainnet   # Create .envrc.mainnet from sample
+
+# Edit the created files with your configuration
+# .envrc.testnet - for testing
+# .envrc.mainnet - for production
+
+# Switch between environments
+npm run env:switch:testnet  # Switch to testnet
+npm run env:switch:mainnet  # Switch to mainnet
+
+# Check current environment
+npm run env:status
+```
+
 ### Quick Start
 
 **Fireblocks Deployment (Recommended):**

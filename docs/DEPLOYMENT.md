@@ -27,6 +27,44 @@ The deployment scripts automatically detect which method to use based on your en
   - Configured Vault Account
   - Whitelisted contract deployment and interaction permissions
 
+## Environment Management
+
+This project supports environment-specific configurations for mainnet and testnet deployments.
+
+### Setup Environment-Specific Configuration
+
+**Using npm scripts (recommended):**
+
+```bash
+# Create environment configuration files
+npm run env:setup:testnet   # Creates .envrc.testnet
+npm run env:setup:mainnet   # Creates .envrc.mainnet
+
+# Edit the created files with your configuration
+# Then switch to the environment you want to use
+npm run env:switch:testnet  # Use testnet configuration
+npm run env:switch:mainnet  # Use mainnet configuration
+
+# Verify current environment
+npm run env:status
+```
+
+**Manual setup:**
+
+```bash
+# Copy sample files
+cp .envrc.testnet.sample .envrc.testnet
+cp .envrc.mainnet.sample .envrc.mainnet
+
+# Edit with your configuration
+vim .envrc.testnet
+vim .envrc.mainnet
+
+# Create symbolic link to the environment you want
+ln -s .envrc.testnet .envrc
+direnv allow
+```
+
 ## Quick Start
 
 ### Option 1: Fireblocks Deployment (Recommended)
