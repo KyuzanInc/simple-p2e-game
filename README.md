@@ -77,8 +77,10 @@ A DEX built on the Oasys Hub, used for swapping SMP tokens. Gaming DEX is a fork
 
 This project supports two deployment methods:
 
-1. **Fireblocks Deployment (Recommended for Production)** - Enterprise-grade security with Fireblocks
-2. **Standard Deployment** - Direct private key deployment for development
+1. **Fireblocks Deployment (Mainnet Only)** - Enterprise-grade security with Fireblocks
+2. **Standard Deployment (Testnet or Mainnet)** - Direct private key deployment
+
+**Important:** Fireblocks only supports Oasys Mainnet (Chain ID: 248). For Oasys Testnet (Chain ID: 9372), you must use standard deployment with private key.
 
 ### Environment Setup
 
@@ -86,12 +88,12 @@ The project uses environment-specific configuration files:
 
 ```bash
 # Setup environment configuration
-npm run env:setup:testnet   # Create .envrc.testnet from sample
-npm run env:setup:mainnet   # Create .envrc.mainnet from sample
+npm run env:setup:testnet   # Create .envrc.testnet (standard deployment)
+npm run env:setup:mainnet   # Create .envrc.mainnet (Fireblocks deployment)
 
 # Edit the created files with your configuration
-# .envrc.testnet - for testing
-# .envrc.mainnet - for production
+# .envrc.testnet - for testing with private key
+# .envrc.mainnet - for production with Fireblocks
 
 # Switch between environments
 npm run env:switch:testnet  # Switch to testnet
@@ -103,17 +105,16 @@ npm run env:status
 
 ### Quick Start
 
-**Fireblocks Deployment (Recommended):**
+**Fireblocks Deployment (Mainnet Only):**
 
 ```bash
 # Install Fireblocks JSON-RPC server
 npm install -g @fireblocks/fireblocks-json-rpc
 
-# Configure .envrc with Fireblocks credentials
-export DEPLOYER_ADDRESS="0x..."  # Your Fireblocks vault address
-export FIREBLOCKS_API_KEY="..."
-export FIREBLOCKS_API_PRIVATE_KEY_PATH="..."
-# ... see docs/DEPLOYMENT.md for full configuration
+# Setup and switch to mainnet environment
+npm run env:setup:mainnet
+# Edit .envrc.mainnet with your Fireblocks credentials
+npm run env:switch:mainnet
 
 # Deploy
 fireblocks-json-rpc --http -- \
@@ -125,13 +126,13 @@ fireblocks-json-rpc --http -- \
   --rpc-url {}
 ```
 
-**Standard Deployment:**
+**Standard Deployment (Testnet or Mainnet):**
 
 ```bash
-# Configure .envrc with private key
-export PRIVATE_KEY="0x..."
-export RPC_URL="https://rpc.mainnet.oasys.games"
-# DO NOT set DEPLOYER_ADDRESS
+# Setup and switch to testnet environment
+npm run env:setup:testnet
+# Edit .envrc.testnet with your private key
+npm run env:switch:testnet
 
 # Deploy
 forge script script/DeploySoulboundToken.s.sol:DeploySoulboundToken \

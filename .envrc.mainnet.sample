@@ -8,6 +8,7 @@
 # RPC URL: https://rpc.mainnet.oasys.games
 #
 # IMPORTANT: Use Fireblocks for mainnet deployments!
+# Fireblocks supports Oasys Mainnet (Chain ID: 248)
 # ============================================
 
 # --------------------------------------------

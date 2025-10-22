@@ -11,6 +11,10 @@ The deployment scripts support two methods:
 
 The deployment scripts automatically detect which method to use based on your environment configuration.
 
+**Important Network Support:**
+- **Oasys Mainnet (Chain ID: 248)**: ✅ Fireblocks supported
+- **Oasys Testnet (Chain ID: 9372)**: ❌ Fireblocks NOT supported - use standard deployment with private key
+
 ## Prerequisites
 
 ### Common Prerequisites
@@ -31,14 +35,18 @@ The deployment scripts automatically detect which method to use based on your en
 
 This project supports environment-specific configurations for mainnet and testnet deployments.
 
+**Deployment Method by Network:**
+- **Testnet (.envrc.testnet)**: Standard deployment with private key (Fireblocks not supported for Chain ID 9372)
+- **Mainnet (.envrc.mainnet)**: Fireblocks deployment recommended (Chain ID 248 is supported)
+
 ### Setup Environment-Specific Configuration
 
 **Using npm scripts (recommended):**
 
 ```bash
 # Create environment configuration files
-npm run env:setup:testnet   # Creates .envrc.testnet
-npm run env:setup:mainnet   # Creates .envrc.mainnet
+npm run env:setup:testnet   # Creates .envrc.testnet (standard deployment)
+npm run env:setup:mainnet   # Creates .envrc.mainnet (Fireblocks deployment)
 
 # Edit the created files with your configuration
 # Then switch to the environment you want to use
@@ -67,7 +75,9 @@ direnv allow
 
 ## Quick Start
 
-### Option 1: Fireblocks Deployment (Recommended)
+### Option 1: Fireblocks Deployment (Mainnet Only)
+
+**Note:** Fireblocks only supports Oasys Mainnet (Chain ID: 248). For testnet, use Option 2.
 
 **1. Install Fireblocks JSON-RPC Server**
 
@@ -75,26 +85,22 @@ direnv allow
 npm install -g @fireblocks/fireblocks-json-rpc
 ```
 
-**2. Setup Environment Configuration**
+**2. Setup Mainnet Environment Configuration**
 
 ```bash
-# Create environment-specific configuration file
-npm run env:setup:mainnet   # For production
-# or
-npm run env:setup:testnet   # For testing
+# Create mainnet configuration file
+npm run env:setup:mainnet
 
-# Edit the created file (.envrc.mainnet or .envrc.testnet) with your Fireblocks credentials:
+# Edit .envrc.mainnet with your Fireblocks credentials:
 # - DEPLOYER_ADDRESS: Address from your Fireblocks vault account
 # - FIREBLOCKS_API_KEY: Your API key UUID
 # - FIREBLOCKS_API_PRIVATE_KEY_PATH: Path to your secret key file
 # - FIREBLOCKS_VAULT_ACCOUNT_IDS: Your vault account ID
-# - FIREBLOCKS_CHAIN_ID: 248 for Mainnet, 9372 for Testnet
+# - FIREBLOCKS_CHAIN_ID: 248 (Mainnet)
 # - Contract configuration variables (SBT_*, P2E_*)
 
-# Switch to the environment you configured
+# Switch to mainnet environment
 npm run env:switch:mainnet
-# or
-npm run env:switch:testnet
 ```
 
 **3. Verify Environment**
@@ -140,26 +146,28 @@ forge script script/DeploySBTSale.s.sol:DeploySBTSale \
 --rpc-url {}
 ```
 
-### Option 2: Standard Deployment
+### Option 2: Standard Deployment (Testnet or Mainnet)
+
+**Note:** This is the ONLY option for Testnet. For Mainnet, Fireblocks is recommended.
 
 **1. Setup Environment Configuration**
 
 ```bash
-# Create environment-specific configuration file
-npm run env:setup:mainnet   # For production
-# or
-npm run env:setup:testnet   # For testing
+# Create testnet configuration file (recommended for testing)
+npm run env:setup:testnet
 
-# Edit the created file (.envrc.mainnet or .envrc.testnet):
-# - Set RPC_URL (https://rpc.mainnet.oasys.games or https://rpc.testnet.oasys.games)
+# OR create mainnet configuration file (if not using Fireblocks)
+npm run env:setup:mainnet
+
+# Edit the created file (.envrc.testnet or .envrc.mainnet):
+# - Set RPC_URL (https://rpc.testnet.oasys.games or https://rpc.mainnet.oasys.games)
 # - Set PRIVATE_KEY with your private key
-# - Comment out all FIREBLOCKS_* and DEPLOYER_ADDRESS variables
 # - Configure contract variables (SBT_*, P2E_*)
 
 # Switch to the environment you configured
-npm run env:switch:mainnet
-# or
 npm run env:switch:testnet
+# or
+npm run env:switch:mainnet
 ```
 
 **2. Verify Environment**
