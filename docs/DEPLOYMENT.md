@@ -48,17 +48,15 @@ cp .envrc.sample .envrc
 Edit `.envrc` and set the following:
 
 ```bash
-# Network Configuration
-# Mainnet: https://rpc.mainnet.oasys.games
-# Testnet: https://rpc.testnet.oasys.games
-export RPC_URL="https://rpc.mainnet.oasys.games"
-
 # Fireblocks Configuration
 export DEPLOYER_ADDRESS="0x..."  # Address from your Fireblocks vault account
 export FIREBLOCKS_API_KEY="your-api-key-uuid"
 export FIREBLOCKS_API_PRIVATE_KEY_PATH="/path/to/fireblocks_secret.key"
 export FIREBLOCKS_VAULT_ACCOUNT_IDS="0"
 export FIREBLOCKS_CHAIN_ID="248"  # 248 for Mainnet, 9372 for Testnet
+
+# Note: RPC_URL is NOT used for Fireblocks deployment
+# The fireblocks-json-rpc server automatically configures the RPC based on FIREBLOCKS_CHAIN_ID
 
 # Contract Configuration (see .envrc.sample for all options)
 export SBT_NAME="YourSBTName"
@@ -123,7 +121,7 @@ cp .envrc.sample .envrc
 Edit `.envrc` and set the following:
 
 ```bash
-# Network Configuration
+# Network Configuration (required for standard deployment)
 # Mainnet: https://rpc.mainnet.oasys.games
 # Testnet: https://rpc.testnet.oasys.games
 export RPC_URL="https://rpc.mainnet.oasys.games"
@@ -132,6 +130,7 @@ export RPC_URL="https://rpc.mainnet.oasys.games"
 export PRIVATE_KEY="0x..."  # Your private key
 
 # DO NOT set DEPLOYER_ADDRESS for standard deployment
+# DO NOT set FIREBLOCKS_* variables for standard deployment
 
 # Contract Configuration (see .envrc.sample for all options)
 export SBT_NAME="YourSBTName"
@@ -179,12 +178,16 @@ The deployment scripts automatically detect which method to use:
 - Uses `vm.startBroadcast(deployer)` with the address
 - Requires `--unlocked` flag when running forge script
 - Transaction signing is handled by Fireblocks JSON-RPC server
+- **RPC URL**: Automatically configured by `fireblocks-json-rpc` based on `FIREBLOCKS_CHAIN_ID`
+- **`RPC_URL` is ignored** when using Fireblocks
 
 **Standard Deployment:**
 - If `DEPLOYER_ADDRESS` is NOT set
 - Falls back to `PRIVATE_KEY` environment variable
 - Uses `vm.startBroadcast(deployerPrivateKey)` with the private key
 - Standard private key signing
+- **RPC URL**: Must be explicitly set via `RPC_URL` environment variable
+- Passed to forge script with `--rpc-url $RPC_URL`
 
 ## Network Configuration
 
@@ -252,13 +255,17 @@ forge verify-contract \
 - `--slow`: Executes transactions sequentially (recommended to avoid nonce issues)
 - `--broadcast`: Broadcasts transactions to the network (omit for dry run)
 - `--unlocked`: Indicates sender account is managed externally (by Fireblocks)
-- `--rpc-url {}`: Empty braces let fireblocks-json-rpc configure RPC URL automatically
+- `--rpc-url {}`: **Empty braces** - lets `fireblocks-json-rpc` configure RPC URL automatically based on `FIREBLOCKS_CHAIN_ID`
+  - Chain ID 248 → `https://rpc.mainnet.oasys.games`
+  - Chain ID 9372 → `https://rpc.testnet.oasys.games`
 
 ### Standard Deployment Flags
 
-- `--rpc-url <url>`: RPC endpoint URL
+- `--rpc-url <url>`: **Explicit RPC endpoint URL** from `$RPC_URL` environment variable
+  - Must be manually set in `.envrc`
+  - Example: `--rpc-url https://rpc.mainnet.oasys.games`
 - `--broadcast`: Broadcasts transactions to the network (omit for dry run)
-- `--private-key <key>`: Private key for signing transactions
+- `--private-key <key>`: Private key for signing transactions from `$PRIVATE_KEY` environment variable
 
 ## Troubleshooting
 

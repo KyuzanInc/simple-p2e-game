@@ -1,15 +1,16 @@
-# The rpc url of the OASYS network
+# --------------------------------------------
+# Deployment Configuration
+# --------------------------------------------
+# Standard deployment: Set RPC_URL and PRIVATE_KEY, leave DEPLOYER_ADDRESS unset
+# Fireblocks deployment: Set DEPLOYER_ADDRESS and Fireblocks credentials below
+#   (RPC_URL is not used for Fireblocks deployment)
+
+# The RPC URL of the OASYS network (for standard deployment only)
 # Mainnet: https://rpc.mainnet.oasys.games
 # Testnet: https://rpc.testnet.oasys.games
 export RPC_URL=https://rpc.testnet.oasys.games
 
-# --------------------------------------------
-# Deployment Configuration
-# --------------------------------------------
-# Standard deployment: Set PRIVATE_KEY and leave DEPLOYER_ADDRESS unset
-# Fireblocks deployment: Set DEPLOYER_ADDRESS and Fireblocks credentials below
-#
-# The deployer private key (for standard deployment)
+# The deployer private key (for standard deployment only)
 export PRIVATE_KEY=""
 
 # --------------------------------------------
