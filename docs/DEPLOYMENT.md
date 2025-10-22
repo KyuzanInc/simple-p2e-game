@@ -75,39 +75,33 @@ direnv allow
 npm install -g @fireblocks/fireblocks-json-rpc
 ```
 
-**2. Configure Environment Variables**
-
-Copy `.envrc.sample` to `.envrc` and configure:
+**2. Setup Environment Configuration**
 
 ```bash
-cp .envrc.sample .envrc
+# Create environment-specific configuration file
+npm run env:setup:mainnet   # For production
+# or
+npm run env:setup:testnet   # For testing
+
+# Edit the created file (.envrc.mainnet or .envrc.testnet) with your Fireblocks credentials:
+# - DEPLOYER_ADDRESS: Address from your Fireblocks vault account
+# - FIREBLOCKS_API_KEY: Your API key UUID
+# - FIREBLOCKS_API_PRIVATE_KEY_PATH: Path to your secret key file
+# - FIREBLOCKS_VAULT_ACCOUNT_IDS: Your vault account ID
+# - FIREBLOCKS_CHAIN_ID: 248 for Mainnet, 9372 for Testnet
+# - Contract configuration variables (SBT_*, P2E_*)
+
+# Switch to the environment you configured
+npm run env:switch:mainnet
+# or
+npm run env:switch:testnet
 ```
 
-Edit `.envrc` and set the following:
+**3. Verify Environment**
 
 ```bash
-# Fireblocks Configuration
-export DEPLOYER_ADDRESS="0x..."  # Address from your Fireblocks vault account
-export FIREBLOCKS_API_KEY="your-api-key-uuid"
-export FIREBLOCKS_API_PRIVATE_KEY_PATH="/path/to/fireblocks_secret.key"
-export FIREBLOCKS_VAULT_ACCOUNT_IDS="0"
-export FIREBLOCKS_CHAIN_ID="248"  # 248 for Mainnet, 9372 for Testnet
-
-# Note: RPC_URL is NOT used for Fireblocks deployment
-# The fireblocks-json-rpc server automatically configures the RPC based on FIREBLOCKS_CHAIN_ID
-
-# Contract Configuration (see .envrc.sample for all options)
-export SBT_NAME="YourSBTName"
-export SBT_SYMBOL="YSBT"
-export SBT_BASE_URI="https://your-api.com/metadata/"
-export SBT_ADMIN="0x..."
-# ... (other configuration variables)
-```
-
-**3. Load Environment Variables**
-
-```bash
-direnv allow
+# Check current environment
+npm run env:status
 
 # Verify Fireblocks configuration
 env | grep FIREBLOCKS
@@ -148,40 +142,31 @@ forge script script/DeploySBTSale.s.sol:DeploySBTSale \
 
 ### Option 2: Standard Deployment
 
-**1. Configure Environment Variables**
-
-Copy `.envrc.sample` to `.envrc`:
+**1. Setup Environment Configuration**
 
 ```bash
-cp .envrc.sample .envrc
+# Create environment-specific configuration file
+npm run env:setup:mainnet   # For production
+# or
+npm run env:setup:testnet   # For testing
+
+# Edit the created file (.envrc.mainnet or .envrc.testnet):
+# - Set RPC_URL (https://rpc.mainnet.oasys.games or https://rpc.testnet.oasys.games)
+# - Set PRIVATE_KEY with your private key
+# - Comment out all FIREBLOCKS_* and DEPLOYER_ADDRESS variables
+# - Configure contract variables (SBT_*, P2E_*)
+
+# Switch to the environment you configured
+npm run env:switch:mainnet
+# or
+npm run env:switch:testnet
 ```
 
-Edit `.envrc` and set the following:
+**2. Verify Environment**
 
 ```bash
-# Network Configuration (required for standard deployment)
-# Mainnet: https://rpc.mainnet.oasys.games
-# Testnet: https://rpc.testnet.oasys.games
-export RPC_URL="https://rpc.mainnet.oasys.games"
-
-# Deployer Configuration
-export PRIVATE_KEY="0x..."  # Your private key
-
-# DO NOT set DEPLOYER_ADDRESS for standard deployment
-# DO NOT set FIREBLOCKS_* variables for standard deployment
-
-# Contract Configuration (see .envrc.sample for all options)
-export SBT_NAME="YourSBTName"
-export SBT_SYMBOL="YSBT"
-export SBT_BASE_URI="https://your-api.com/metadata/"
-export SBT_ADMIN="0x..."
-# ... (other configuration variables)
-```
-
-**2. Load Environment Variables**
-
-```bash
-direnv allow
+# Check current environment
+npm run env:status
 
 # Verify configuration
 env | grep -E "^(RPC_URL|PRIVATE_KEY|SBT_|P2E_)"
