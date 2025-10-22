@@ -1,54 +1,40 @@
 # ============================================
-# Environment Configuration Setup Guide
+# TESTNET Environment Configuration
 # ============================================
+# This configuration is for TESTING deployment on Oasys Testnet
 #
-# This project uses environment-specific configuration files for deployment:
+# Network: Oasys Hub Layer (Testnet)
+# Chain ID: 9372
+# RPC URL: https://rpc.testnet.oasys.games
 #
-#   .envrc.mainnet  - Production (Oasys Mainnet)
-#   .envrc.testnet  - Testing (Oasys Testnet)
-#
+# For testing, you can use either Fireblocks or private key
 # ============================================
-# Quick Setup
-# ============================================
-#
-# Using npm scripts (recommended):
-#
-#   npm run env:setup:mainnet  # Setup mainnet environment
-#   npm run env:setup:testnet  # Setup testnet environment
-#   npm run env:switch:mainnet # Switch to mainnet
-#   npm run env:switch:testnet # Switch to testnet
-#
-# Manual setup:
-#
-#   1. Copy the environment-specific sample file:
-#      cp .envrc.mainnet.sample .envrc.mainnet
-#      cp .envrc.testnet.sample .envrc.testnet
-#
-#   2. Edit the files with your configuration
-#
-#   3. Create a symbolic link to the environment you want to use:
-#      ln -s .envrc.testnet .envrc
-#
-#   4. Allow direnv to load the configuration:
-#      direnv allow
-#
-# ============================================
-# Switching Environments
-# ============================================
-#
-# Using npm scripts:
-#   npm run env:switch:testnet
-#   npm run env:switch:mainnet
-#
-# Manual:
-#   ln -sf .envrc.testnet .envrc && direnv allow
-#   ln -sf .envrc.mainnet .envrc && direnv allow
-#
-# ============================================
-# For more details, see:
-#   docs/ENVIRONMENT_MANAGEMENT.md
-#   docs/DEPLOYMENT.md
-# ============================================
+
+# --------------------------------------------
+# Deployment Configuration
+# --------------------------------------------
+
+# Option 1: Standard Deployment with Private Key (For Testing)
+export RPC_URL=https://rpc.testnet.oasys.games
+export PRIVATE_KEY=""
+
+# Option 2: Fireblocks Deployment (Uncomment if using Fireblocks for testnet)
+# Deployer address from Fireblocks vault account
+# export DEPLOYER_ADDRESS="0x0000000000000000000000000000000000000000"
+
+# Fireblocks API Key (UUID format) for testnet
+# export FIREBLOCKS_API_KEY="your-testnet-api-key-uuid"
+
+# Path to Fireblocks API secret key file for testnet
+# export FIREBLOCKS_API_PRIVATE_KEY_PATH="/path/to/fireblocks_secret_testnet.key"
+
+# Fireblocks Vault Account ID(s) for testnet
+# export FIREBLOCKS_VAULT_ACCOUNT_IDS="1"
+
+# Chain ID for Oasys Testnet
+# export FIREBLOCKS_CHAIN_ID="9372"
+
+# NOTE: Comment out RPC_URL and PRIVATE_KEY above if using Fireblocks
 
 # --------------------------------------------
 # For SoulboundToken
