@@ -1,23 +1,36 @@
 # The rpc url of the OASYS network
+# Mainnet: https://rpc.mainnet.oasys.games
+# Testnet: https://rpc.testnet.oasys.games
 export RPC_URL=https://rpc.testnet.oasys.games
 
-# The deployer private key (not needed when using Fireblocks)
+# --------------------------------------------
+# Deployment Configuration
+# --------------------------------------------
+# Standard deployment: Set PRIVATE_KEY and leave DEPLOYER_ADDRESS unset
+# Fireblocks deployment: Set DEPLOYER_ADDRESS and Fireblocks credentials below
+#
+# The deployer private key (for standard deployment)
 export PRIVATE_KEY=""
 
 # --------------------------------------------
 # Fireblocks Configuration (Optional)
-# See docs/FIREBLOCKS_DEPLOYMENT.md for details
+# See docs/DEPLOYMENT.md for details
 # --------------------------------------------
+# Deployer address from Fireblocks vault account
+# When set, deployment scripts will use Fireblocks instead of PRIVATE_KEY
+# export DEPLOYER_ADDRESS="0x0000000000000000000000000000000000000000"
+
 # Fireblocks API Key (UUID format)
 # export FIREBLOCKS_API_KEY="your-api-key-uuid"
+
 # Path to Fireblocks API secret key file
 # export FIREBLOCKS_API_PRIVATE_KEY_PATH="/path/to/fireblocks_secret.key"
+
 # Fireblocks Vault Account ID(s)
 # export FIREBLOCKS_VAULT_ACCOUNT_IDS="0"
+
 # Chain ID: 248 for Oasys Mainnet, 9372 for Oasys Testnet
 # export FIREBLOCKS_CHAIN_ID="9372"
-# Deployer address from Fireblocks vault account (required when using Fireblocks)
-# export DEPLOYER_ADDRESS="0x0000000000000000000000000000000000000000"
 
 # --------------------------------------------
 # For SoulboundToken

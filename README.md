@@ -75,32 +75,26 @@ A DEX built on the Oasys Hub, used for swapping SMP tokens. Gaming DEX is a fork
 
 ## Deployment
 
-### Standard Deployment
+This project supports two deployment methods:
 
-Deploy contracts using Foundry scripts with a private key:
+1. **Fireblocks Deployment (Recommended for Production)** - Enterprise-grade security with Fireblocks
+2. **Standard Deployment** - Direct private key deployment for development
 
-```bash
-# Configure environment variables (see .envrc.sample)
-export PRIVATE_KEY="your-private-key"
-export RPC_URL="https://rpc.mainnet.oasys.games"
-# ... other configuration variables
+### Quick Start
 
-# Deploy SoulboundToken
-forge script script/DeploySoulboundToken.s.sol --rpc-url $RPC_URL --broadcast --private-key $PRIVATE_KEY
-
-# Deploy SBTSale
-forge script script/DeploySBTSale.s.sol --rpc-url $RPC_URL --broadcast --private-key $PRIVATE_KEY
-```
-
-### Fireblocks Deployment (Recommended for Production)
-
-For enterprise-grade security using Fireblocks for key management and transaction signing, see the [Fireblocks Deployment Guide](./docs/FIREBLOCKS_DEPLOYMENT.md).
+**Fireblocks Deployment (Recommended):**
 
 ```bash
 # Install Fireblocks JSON-RPC server
 npm install -g @fireblocks/fireblocks-json-rpc
 
-# Deploy with Fireblocks (see docs for full configuration)
+# Configure .envrc with Fireblocks credentials
+export DEPLOYER_ADDRESS="0x..."  # Your Fireblocks vault address
+export FIREBLOCKS_API_KEY="..."
+export FIREBLOCKS_API_PRIVATE_KEY_PATH="..."
+# ... see docs/DEPLOYMENT.md for full configuration
+
+# Deploy
 fireblocks-json-rpc --http -- \
   forge script script/DeploySoulboundToken.s.sol:DeploySoulboundToken \
   --sender $DEPLOYER_ADDRESS \
@@ -110,4 +104,19 @@ fireblocks-json-rpc --http -- \
   --rpc-url {}
 ```
 
-For detailed setup and configuration, refer to [docs/FIREBLOCKS_DEPLOYMENT.md](./docs/FIREBLOCKS_DEPLOYMENT.md).
+**Standard Deployment:**
+
+```bash
+# Configure .envrc with private key
+export PRIVATE_KEY="0x..."
+export RPC_URL="https://rpc.mainnet.oasys.games"
+# DO NOT set DEPLOYER_ADDRESS
+
+# Deploy
+forge script script/DeploySoulboundToken.s.sol:DeploySoulboundToken \
+  --rpc-url $RPC_URL \
+  --broadcast \
+  --private-key $PRIVATE_KEY
+```
+
+For detailed setup, configuration, and troubleshooting, see **[docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md)**.

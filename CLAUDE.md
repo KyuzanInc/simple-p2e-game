@@ -40,10 +40,11 @@ forge fmt
 npm run script:GenerateDeployers
 
 # Deploy contracts (requires environment configuration)
+# Standard deployment (with private key)
 forge script script/DeploySoulboundToken.s.sol --rpc-url $RPC_URL --broadcast --private-key $PRIVATE_KEY
 forge script script/DeploySBTSale.s.sol --rpc-url $RPC_URL --broadcast --private-key $PRIVATE_KEY
 
-# Deploy with Fireblocks (for production - see docs/FIREBLOCKS_DEPLOYMENT.md)
+# Deploy with Fireblocks (recommended for production - see docs/DEPLOYMENT.md)
 fireblocks-json-rpc --http -- forge script script/DeploySoulboundToken.s.sol:DeploySoulboundToken --sender $DEPLOYER_ADDRESS --slow --broadcast --unlocked --rpc-url {}
 fireblocks-json-rpc --http -- forge script script/DeploySBTSale.s.sol:DeploySBTSale --sender $DEPLOYER_ADDRESS --slow --broadcast --unlocked --rpc-url {}
 ```
@@ -89,7 +90,7 @@ Environment variables required (see `.envrc.sample`):
 - SBT parameters: name, symbol, base URI, admin address
 - SBTSale parameters: liquidity pool, recipients, pricing, ratios
 
-For production deployments, Fireblocks integration is available for secure key management. See `docs/FIREBLOCKS_DEPLOYMENT.md` for detailed configuration and usage instructions.
+For production deployments, Fireblocks integration is available for secure key management. See `docs/DEPLOYMENT.md` for detailed configuration and usage instructions.
 
 **Fireblocks Environment Variables (Optional):**
 - `FIREBLOCKS_API_KEY`: Fireblocks API key (UUID format)
