@@ -6,6 +6,28 @@ A Play-to-Earn (P2E) project where players earn SMP (Simple) Tokens—a cryptocu
 
 - For smart contract developers: Work from the root directory. Follow the instructions below.
   - Note: This project uses [Foundry](https://getfoundry.sh/). Please make sure Foundry is installed beforehand.
+  - Note: This project uses [direnv](https://direnv.net/) for environment variable management. Please install and configure direnv.
+
+### Prerequisites
+
+```sh
+# Install Foundry
+curl -L https://foundry.paradigm.xyz | bash
+foundryup
+
+# Install direnv
+# macOS
+brew install direnv
+
+# Linux
+sudo apt-get install direnv
+
+# Add direnv hook to your shell (~/.bashrc, ~/.zshrc, etc.)
+eval "$(direnv hook bash)"  # or zsh, fish, etc.
+# Restart your shell after adding the hook
+```
+
+### Setup
 
 ```sh
 # Initialize git submodules (required for Foundry dependencies)
@@ -13,6 +35,10 @@ git submodule update --init --recursive
 
 # Install dependencies
 npm install
+
+# Configure environment (see Deployment section below for details)
+# For now, just acknowledge the .envrc.sample file
+cat .envrc.sample
 
 # Compile contracts
 npm run build
@@ -42,3 +68,33 @@ A DEX built on the Oasys Hub, used for swapping SMP tokens. Gaming DEX is a fork
 
 - [testnet](https://testnet.gaming-dex.com/#/oasys-testnet/swap)
 - [mainnet](https://www.gaming-dex.com/#/defiverse/swap)
+
+## Deployment
+
+This project supports environment-specific deployments:
+
+- **Testnet**: Private key deployment (Chain ID: 9372)
+- **Mainnet**: Fireblocks deployment (Chain ID: 248, recommended for production)
+
+### Quick Start
+
+```bash
+# 1. Setup environment
+npm run env:setup:testnet    # or env:setup:mainnet
+npm run env:switch:testnet   # or env:switch:mainnet
+
+# 2. Edit .envrc.testnet (or .envrc.mainnet) with your configuration
+
+# 3. Deploy contracts (see docs for specific commands)
+
+# 4. Setup roles and configurations
+# Run the SetupRoles script after deployment
+```
+
+### Documentation
+
+For detailed instructions:
+
+- **[docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md)** - Complete deployment guide
+- **[docs/SETUP_ROLES.md](./docs/SETUP_ROLES.md)** - Post-deployment role configuration
+- **[CLAUDE.md](./CLAUDE.md)** - Development commands and architecture

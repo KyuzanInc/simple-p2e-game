@@ -12,6 +12,11 @@
     "test": "forge test -vvv",
     "test:watch": "forge test -vvv --watch",
     "fmt": "forge fmt",
-    "script:GenerateDeployers": "forge script script/GenerateDeployers.s.sol && forge fmt test/helpers/deployers/*.sol"
+    "script:GenerateDeployers": "forge script script/GenerateDeployers.s.sol && forge fmt test/helpers/deployers/*.sol",
+    "env:setup:mainnet": "cp .envrc.mainnet.sample .envrc.mainnet && echo '✅ Created .envrc.mainnet - Please edit it with your configuration'",
+    "env:setup:testnet": "cp .envrc.testnet.sample .envrc.testnet && echo '✅ Created .envrc.testnet - Please edit it with your configuration'",
+    "env:switch:mainnet": "ln -sf .envrc.mainnet .envrc && direnv allow && echo '✅ Switched to mainnet environment'",
+    "env:switch:testnet": "ln -sf .envrc.testnet .envrc && direnv allow && echo '✅ Switched to testnet environment'",
+    "env:status": "readlink .envrc && echo '' && env | grep -E '^(RPC_URL|FIREBLOCKS_CHAIN_ID|SBT_NAME)='"
   }
 }

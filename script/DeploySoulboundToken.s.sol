@@ -12,8 +12,19 @@ import {SoulboundToken} from "../src/SoulboundToken.sol";
  */
 contract DeploySoulboundToken is Script {
     function run() external returns (TransparentUpgradeableProxy proxy) {
-        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
-        vm.startBroadcast(deployerPrivateKey);
+        // Support both PRIVATE_KEY (standard) and DEPLOYER_ADDRESS (Fireblocks)
+        // When using Fireblocks with --unlocked flag, use DEPLOYER_ADDRESS
+        // Otherwise, use PRIVATE_KEY for standard deployment
+        address deployer = vm.envOr("DEPLOYER_ADDRESS", address(0));
+
+        if (deployer != address(0)) {
+            // Fireblocks deployment: use address directly
+            vm.startBroadcast(deployer);
+        } else {
+            // Standard deployment: use private key
+            uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
+            vm.startBroadcast(deployerPrivateKey);
+        }
 
         string memory name = vm.envString("SBT_NAME");
         string memory symbol = vm.envString("SBT_SYMBOL");

@@ -1,0 +1,69 @@
+# ============================================
+# TESTNET Environment Configuration
+# ============================================
+# This configuration is for TESTING deployment on Oasys Testnet
+#
+# Network: Oasys Hub Layer (Testnet)
+# Chain ID: 9372
+# RPC URL: https://rpc.testnet.oasys.games
+#
+# NOTE: Fireblocks JSON-RPC does not support Oasys Testnet (Chain ID: 9372)
+# For testnet deployment, use standard private key deployment method
+# ============================================
+
+# --------------------------------------------
+# Deployment Configuration
+# --------------------------------------------
+
+# Testnet uses Private Key deployment (Fireblocks does not support Chain ID 9372)
+export RPC_URL="https://rpc.testnet.oasys.games"
+export PRIVATE_KEY=""
+
+# --------------------------------------------
+# For SoulboundToken
+# ---------------------------------------------
+# The name of the soulbound token
+export SBT_NAME="Soulbound"
+# The symbol of the soulbound token
+export SBT_SYMBOL="SBT"
+# The base uri of the soulbound token
+export SBT_BASE_URI="https://token/"
+# The admin of the Soulbound Token
+# - The admin can upgrade the proxy.
+# - The admin can grant privileged access rights.
+# - The admin initially holds the minting role.
+export SBT_ADMIN="0x0000000000000000000000000000000000000000"
+
+# --------------------------------------------
+# For SBTSale
+# --------------------------------------------
+# The pOAS minter address
+export P2E_POAS_MINTER="0x0000000000000000000000000000000000000000"
+# The address of the WOAS-SMP liquidity pool
+export P2E_LIQUIDITY_POOL="0x0000000000000000000000000000000000000000"
+# Recipient of LP tokens from protocol operations
+export P2E_LP_RECIPIENT="0x0000000000000000000000000000000000000000"
+# Recipient of protocol revenue (OAS)
+export P2E_REVENUE_RECIPIENT="0x0000000000000000000000000000000000000000"
+# Base price per NFT in SMP (wei)
+export P2E_SMP_BASE_PRICE=50000000000000000000
+# Ratio of SMP to burn (in basis points)
+export P2E_SMP_BURN_RATIO=5000
+# Ratio of SMP to provide as liquidity (in basis points)
+export P2E_SMP_LIQUIDITY_RATIO=4000
+# Proxy admin and initial owner of the contract
+export P2E_ADMIN="0x0000000000000000000000000000000000000000"
+
+# --------------------------------------------
+# Post-Deployment Configuration
+# (Fill in after deploying contracts)
+# --------------------------------------------
+# SoulboundToken Proxy address (from deployment output)
+export SBT_PROXY="0x0000000000000000000000000000000000000000"
+
+# SBTSale Proxy address (from deployment output)
+export SBTSALE_PROXY="0x0000000000000000000000000000000000000000"
+
+# Backend signer address for purchase signature verification
+# This should be the address corresponding to your backend's private key
+export SIGNER_ADDRESS="0x0000000000000000000000000000000000000000"

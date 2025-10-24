@@ -8,10 +8,17 @@ node_modules/
 
 # Dotenv file
 .env
+.envrc
 
 # Dotenvrc file
 .envrc*
 !.envrc.sample
+!.envrc.mainnet.sample
+!.envrc.testnet.sample
+
+# Fireblocks secret key files
+fireblocks_secret.key
+fireblocks_secret_*.key
 
 # NPM Packages
 *.tgz
