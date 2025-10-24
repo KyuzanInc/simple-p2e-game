@@ -47,6 +47,13 @@ forge script script/DeploySBTSale.s.sol --rpc-url $RPC_URL --broadcast --private
 # Deploy with Fireblocks (recommended for production - see docs/DEPLOYMENT.md)
 fireblocks-json-rpc --http -- forge script script/DeploySoulboundToken.s.sol:DeploySoulboundToken --sender $DEPLOYER_ADDRESS --slow --broadcast --unlocked --rpc-url {}
 fireblocks-json-rpc --http -- forge script script/DeploySBTSale.s.sol:DeploySBTSale --sender $DEPLOYER_ADDRESS --slow --broadcast --unlocked --rpc-url {}
+
+# Setup roles and configurations after deployment (see docs/SETUP_ROLES.md)
+# Standard setup (with private key)
+forge script script/SetupRoles.s.sol:SetupRoles --rpc-url $RPC_URL --broadcast --private-key $PRIVATE_KEY
+
+# Setup with Fireblocks (recommended for production)
+fireblocks-json-rpc --http -- forge script script/SetupRoles.s.sol:SetupRoles --sender $DEPLOYER_ADDRESS --slow --broadcast --unlocked --rpc-url {}
 ```
 
 ## Architecture Overview

@@ -15,11 +15,9 @@
 # Deployment Configuration
 # --------------------------------------------
 
-# Standard Deployment with Private Key
-export RPC_URL=https://rpc.testnet.oasys.games
+# Testnet uses Private Key deployment (Fireblocks does not support Chain ID 9372)
+export RPC_URL="https://rpc.testnet.oasys.games"
 export PRIVATE_KEY=""
-
-# DO NOT use Fireblocks for Oasys Testnet (Chain ID 9372 is not supported)
 
 # --------------------------------------------
 # For SoulboundToken
@@ -55,3 +53,17 @@ export P2E_SMP_BURN_RATIO=5000
 export P2E_SMP_LIQUIDITY_RATIO=4000
 # Proxy admin and initial owner of the contract
 export P2E_ADMIN="0x0000000000000000000000000000000000000000"
+
+# --------------------------------------------
+# Post-Deployment Configuration
+# (Fill in after deploying contracts)
+# --------------------------------------------
+# SoulboundToken Proxy address (from deployment output)
+export SBT_PROXY="0x0000000000000000000000000000000000000000"
+
+# SBTSale Proxy address (from deployment output)
+export SBTSALE_PROXY="0x0000000000000000000000000000000000000000"
+
+# Backend signer address for purchase signature verification
+# This should be the address corresponding to your backend's private key
+export SIGNER_ADDRESS="0x0000000000000000000000000000000000000000"

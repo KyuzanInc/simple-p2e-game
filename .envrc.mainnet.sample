@@ -31,9 +31,11 @@ export FIREBLOCKS_VAULT_ACCOUNT_IDS="0"
 # Chain ID for Oasys Mainnet
 export FIREBLOCKS_CHAIN_ID="248"
 
+# RPC URL (used for contract verification and queries)
+export RPC_URL="https://rpc.mainnet.oasys.games"
+
 # Standard Deployment (NOT RECOMMENDED for Mainnet)
 # Only uncomment if you must use private key deployment
-# export RPC_URL=https://rpc.mainnet.oasys.games
 # export PRIVATE_KEY=""
 # Comment out DEPLOYER_ADDRESS above if using private key
 
@@ -71,3 +73,17 @@ export P2E_SMP_BURN_RATIO=5000
 export P2E_SMP_LIQUIDITY_RATIO=4000
 # Proxy admin and initial owner of the contract
 export P2E_ADMIN="0x0000000000000000000000000000000000000000"
+
+# --------------------------------------------
+# Post-Deployment Configuration
+# (Fill in after deploying contracts)
+# --------------------------------------------
+# SoulboundToken Proxy address (from deployment output)
+export SBT_PROXY="0x0000000000000000000000000000000000000000"
+
+# SBTSale Proxy address (from deployment output)
+export SBTSALE_PROXY="0x0000000000000000000000000000000000000000"
+
+# Backend signer address for purchase signature verification
+# This should be the address corresponding to your backend's private key
+export SIGNER_ADDRESS="0x0000000000000000000000000000000000000000"

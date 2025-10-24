@@ -1,85 +1,43 @@
 # ============================================
-# Environment Configuration Setup Guide
+# Environment Configuration
 # ============================================
 #
-# This project uses environment-specific configuration files for deployment:
+# This project uses environment-specific configuration files:
 #
 #   .envrc.mainnet  - Production (Oasys Mainnet)
 #   .envrc.testnet  - Testing (Oasys Testnet)
 #
 # ============================================
-# Quick Setup
+# Setup Instructions
 # ============================================
 #
-# Using npm scripts (recommended):
+# 1. Copy the appropriate sample file:
+#    cp .envrc.mainnet.sample .envrc.mainnet
+#    cp .envrc.testnet.sample .envrc.testnet
 #
-#   npm run env:setup:mainnet  # Setup mainnet environment
-#   npm run env:setup:testnet  # Setup testnet environment
-#   npm run env:switch:mainnet # Switch to mainnet
-#   npm run env:switch:testnet # Switch to testnet
+# 2. Edit the files with your configuration
 #
-# Manual setup:
+# 3. Create a symbolic link to the environment you want to use:
+#    ln -sf .envrc.testnet .envrc  # or .envrc.mainnet
 #
-#   1. Copy the environment-specific sample file:
-#      cp .envrc.mainnet.sample .envrc.mainnet
-#      cp .envrc.testnet.sample .envrc.testnet
-#
-#   2. Edit the files with your configuration
-#
-#   3. Create a symbolic link to the environment you want to use:
-#      ln -s .envrc.testnet .envrc
-#
-#   4. Allow direnv to load the configuration:
-#      direnv allow
+# 4. Allow direnv to load the configuration:
+#    direnv allow
 #
 # ============================================
-# Switching Environments
+# Quick Commands (npm scripts)
 # ============================================
 #
-# Using npm scripts:
-#   npm run env:switch:testnet
-#   npm run env:switch:mainnet
-#
-# Manual:
-#   ln -sf .envrc.testnet .envrc && direnv allow
-#   ln -sf .envrc.mainnet .envrc && direnv allow
+#   npm run env:setup:mainnet   # Create .envrc.mainnet from sample
+#   npm run env:setup:testnet   # Create .envrc.testnet from sample
+#   npm run env:switch:mainnet  # Switch to mainnet
+#   npm run env:switch:testnet  # Switch to testnet
 #
 # ============================================
-# For more details, see:
+# Documentation
+# ============================================
+#
+# For detailed deployment instructions, see:
 #   docs/DEPLOYMENT.md
+#   docs/SETUP_ROLES.md
+#
 # ============================================
-
-# --------------------------------------------
-# For SoulboundToken
-# ---------------------------------------------
-# The name of the soulbound token
-export SBT_NAME="Soulbound"
-# The symbol of the soulbound token
-export SBT_SYMBOL="SBT"
-# The base uri of the soulbound token
-export SBT_BASE_URI="https://token/"
-# The admin of the Soulbound Token
-# - The admin can upgrade the proxy.
-# - The admin can grant privileged access rights.
-# - The admin initially holds the minting role.
-export SBT_ADMIN="0x0000000000000000000000000000000000000000"
-
-# --------------------------------------------
-# For SBTSale
-# --------------------------------------------
-# The pOAS minter address
-export P2E_POAS_MINTER="0x0000000000000000000000000000000000000000"
-# The address of the WOAS-SMP liquidity pool
-export P2E_LIQUIDITY_POOL="0x0000000000000000000000000000000000000000"
-# Recipient of LP tokens from protocol operations
-export P2E_LP_RECIPIENT="0x0000000000000000000000000000000000000000"
-# Recipient of protocol revenue (OAS)
-export P2E_REVENUE_RECIPIENT="0x0000000000000000000000000000000000000000"
-# Base price per NFT in SMP (wei)
-export P2E_SMP_BASE_PRICE=50000000000000000000
-# Ratio of SMP to burn (in basis points)
-export P2E_SMP_BURN_RATIO=5000
-# Ratio of SMP to provide as liquidity (in basis points)
-export P2E_SMP_LIQUIDITY_RATIO=4000
-# Proxy admin and initial owner of the contract
-export P2E_ADMIN="0x0000000000000000000000000000000000000000"

@@ -36,13 +36,9 @@ git submodule update --init --recursive
 # Install dependencies
 npm install
 
-# Configure environment variables
-cp .envrc.sample .envrc
-# Edit .envrc with your configuration
-direnv allow
-
-# Verify environment variables are loaded
-env | grep -E "^(RPC_URL|PRIVATE_KEY|SBT_|P2E_)"
+# Configure environment (see Deployment section below for details)
+# For now, just acknowledge the .envrc.sample file
+cat .envrc.sample
 
 # Compile contracts
 npm run build
@@ -75,70 +71,30 @@ A DEX built on the Oasys Hub, used for swapping SMP tokens. Gaming DEX is a fork
 
 ## Deployment
 
-This project supports two deployment methods:
+This project supports environment-specific deployments:
 
-1. **Fireblocks Deployment (Mainnet Only)** - Enterprise-grade security with Fireblocks
-2. **Standard Deployment (Testnet or Mainnet)** - Direct private key deployment
-
-**Important:** Fireblocks only supports Oasys Mainnet (Chain ID: 248). For Oasys Testnet (Chain ID: 9372), you must use standard deployment with private key.
-
-### Environment Setup
-
-The project uses environment-specific configuration files:
-
-```bash
-# Setup environment configuration
-npm run env:setup:testnet   # Create .envrc.testnet (standard deployment)
-npm run env:setup:mainnet   # Create .envrc.mainnet (Fireblocks deployment)
-
-# Edit the created files with your configuration
-# .envrc.testnet - for testing with private key
-# .envrc.mainnet - for production with Fireblocks
-
-# Switch between environments
-npm run env:switch:testnet  # Switch to testnet
-npm run env:switch:mainnet  # Switch to mainnet
-
-# Check current environment
-npm run env:status
-```
+- **Testnet**: Private key deployment (Chain ID: 9372)
+- **Mainnet**: Fireblocks deployment (Chain ID: 248, recommended for production)
 
 ### Quick Start
 
-**Fireblocks Deployment (Mainnet Only):**
-
 ```bash
-# Install Fireblocks JSON-RPC server
-npm install -g @fireblocks/fireblocks-json-rpc
+# 1. Setup environment
+npm run env:setup:testnet    # or env:setup:mainnet
+npm run env:switch:testnet   # or env:switch:mainnet
 
-# Setup and switch to mainnet environment
-npm run env:setup:mainnet
-# Edit .envrc.mainnet with your Fireblocks credentials
-npm run env:switch:mainnet
+# 2. Edit .envrc.testnet (or .envrc.mainnet) with your configuration
 
-# Deploy
-fireblocks-json-rpc --http -- \
-  forge script script/DeploySoulboundToken.s.sol:DeploySoulboundToken \
-  --sender $DEPLOYER_ADDRESS \
-  --slow \
-  --broadcast \
-  --unlocked \
-  --rpc-url {}
+# 3. Deploy contracts (see docs for specific commands)
+
+# 4. Setup roles and configurations
+# Run the SetupRoles script after deployment
 ```
 
-**Standard Deployment (Testnet or Mainnet):**
+### Documentation
 
-```bash
-# Setup and switch to testnet environment
-npm run env:setup:testnet
-# Edit .envrc.testnet with your private key
-npm run env:switch:testnet
+For detailed instructions:
 
-# Deploy
-forge script script/DeploySoulboundToken.s.sol:DeploySoulboundToken \
-  --rpc-url $RPC_URL \
-  --broadcast \
-  --private-key $PRIVATE_KEY
-```
-
-For detailed setup, configuration, and troubleshooting, see **[docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md)**.
+- **[docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md)** - Complete deployment guide
+- **[docs/SETUP_ROLES.md](./docs/SETUP_ROLES.md)** - Post-deployment role configuration
+- **[CLAUDE.md](./CLAUDE.md)** - Development commands and architecture
