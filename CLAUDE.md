@@ -45,7 +45,15 @@ forge script script/DeploySoulboundToken.s.sol --rpc-url $RPC_URL --broadcast --
 forge script script/DeploySBTSale.s.sol --rpc-url $RPC_URL --broadcast --private-key $PRIVATE_KEY
 
 # Deploy with Fireblocks (recommended for production - see docs/DEPLOYMENT.md)
+# Note: Requires FIREBLOCKS_API_KEY, FIREBLOCKS_API_PRIVATE_KEY_PATH, FIREBLOCKS_CHAIN_ID
+FIREBLOCKS_API_KEY=$FIREBLOCKS_API_KEY \
+FIREBLOCKS_API_PRIVATE_KEY_PATH=$FIREBLOCKS_API_PRIVATE_KEY_PATH \
+FIREBLOCKS_CHAIN_ID=$FIREBLOCKS_CHAIN_ID \
 fireblocks-json-rpc --http -- forge script script/DeploySoulboundToken.s.sol:DeploySoulboundToken --sender $DEPLOYER_ADDRESS --slow --broadcast --unlocked --rpc-url {}
+
+FIREBLOCKS_API_KEY=$FIREBLOCKS_API_KEY \
+FIREBLOCKS_API_PRIVATE_KEY_PATH=$FIREBLOCKS_API_PRIVATE_KEY_PATH \
+FIREBLOCKS_CHAIN_ID=$FIREBLOCKS_CHAIN_ID \
 fireblocks-json-rpc --http -- forge script script/DeploySBTSale.s.sol:DeploySBTSale --sender $DEPLOYER_ADDRESS --slow --broadcast --unlocked --rpc-url {}
 
 # Setup roles and configurations after deployment (see docs/SETUP_ROLES.md)
@@ -53,6 +61,9 @@ fireblocks-json-rpc --http -- forge script script/DeploySBTSale.s.sol:DeploySBTS
 forge script script/SetupRoles.s.sol:SetupRoles --rpc-url $RPC_URL --broadcast --private-key $PRIVATE_KEY
 
 # Setup with Fireblocks (recommended for production)
+FIREBLOCKS_API_KEY=$FIREBLOCKS_API_KEY \
+FIREBLOCKS_API_PRIVATE_KEY_PATH=$FIREBLOCKS_API_PRIVATE_KEY_PATH \
+FIREBLOCKS_CHAIN_ID=$FIREBLOCKS_CHAIN_ID \
 fireblocks-json-rpc --http -- forge script script/SetupRoles.s.sol:SetupRoles --sender $DEPLOYER_ADDRESS --slow --broadcast --unlocked --rpc-url {}
 ```
 

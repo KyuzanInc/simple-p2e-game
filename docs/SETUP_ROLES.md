@@ -46,13 +46,16 @@ The `SetupRoles.s.sol` script performs the following operations:
 npm run env:switch:mainnet
 
 # Execute setup script with Fireblocks
-fireblocks-json-rpc --http -- forge script \
-  script/SetupRoles.s.sol:SetupRoles \
-  --sender $DEPLOYER_ADDRESS \
-  --slow \
-  --broadcast \
-  --unlocked \
-  --rpc-url {}
+FIREBLOCKS_API_KEY=$FIREBLOCKS_API_KEY \
+FIREBLOCKS_API_PRIVATE_KEY_PATH=$FIREBLOCKS_API_PRIVATE_KEY_PATH \
+FIREBLOCKS_CHAIN_ID=$FIREBLOCKS_CHAIN_ID \
+fireblocks-json-rpc --http -- \
+forge script script/SetupRoles.s.sol:SetupRoles \
+--sender $DEPLOYER_ADDRESS \
+--slow \
+--broadcast \
+--unlocked \
+--rpc-url {}
 ```
 
 ### Testnet (Private Key)
@@ -110,135 +113,6 @@ Expected output:
 ### Script runs but no changes
 - **Cause**: All configurations are already set correctly
 - **Solution**: Check the console output - if values already match, the script will skip them
-
-## Manual Setup (Alternative)
-
-If you prefer to execute commands individually:
-
-### Mainnet (Fireblocks)
-
-```bash
-# Switch environment
-npm run env:switch:mainnet
-
-# 1. Set Signer
-fireblocks-json-rpc --http -- cast send $SBTSALE_PROXY \
-  "setSigner(address)" $SIGNER_ADDRESS \
-  --rpc-url {} \
-  --unlocked \
-  --from $DEPLOYER_ADDRESS
-
-# 2. Set SBT Contract
-fireblocks-json-rpc --http -- cast send $SBTSALE_PROXY \
-  "setSBTContract(address)" $SBT_PROXY \
-  --rpc-url {} \
-  --unlocked \
-  --from $DEPLOYER_ADDRESS
-
-# 3. Grant MINTER_ROLE
-MINTER_ROLE=$(cast keccak "MINTER_ROLE")
-fireblocks-json-rpc --http -- cast send $SBT_PROXY \
-  "grantRole(bytes32,address)" \
-  $MINTER_ROLE \
-  $SBTSALE_PROXY \
-  --rpc-url {} \
-  --unlocked \
-  --from $DEPLOYER_ADDRESS
-```
-
-### Testnet (Private Key)
-
-```bash
-# Switch environment
-npm run env:switch:testnet
-
-# 1. Set Signer
-cast send $SBTSALE_PROXY \
-  "setSigner(address)" $SIGNER_ADDRESS \
-  --rpc-url $RPC_URL \
-  --private-key $PRIVATE_KEY
-
-# 2. Set SBT Contract
-cast send $SBTSALE_PROXY \
-  "setSBTContract(address)" $SBT_PROXY \
-  --rpc-url $RPC_URL \
-  --private-key $PRIVATE_KEY
-
-# 3. Grant MINTER_ROLE
-MINTER_ROLE=$(cast keccak "MINTER_ROLE")
-cast send $SBT_PROXY \
-  "grantRole(bytes32,address)" \
-  $MINTER_ROLE \
-  $SBTSALE_PROXY \
-  --rpc-url $RPC_URL \
-  --private-key $PRIVATE_KEY
-```
-
-## Additional Roles (Optional)
-
-> **Note:** Examples below use Fireblocks commands. For testnet, replace with:
-> ```bash
-> cast send <CONTRACT> "<FUNCTION>" <ARGS> --rpc-url $RPC_URL --private-key $PRIVATE_KEY
-> ```
-
-### Grant Additional Admin Role
-
-To add another admin to SoulboundToken:
-
-```bash
-# Switch to appropriate environment
-npm run env:switch:mainnet  # or testnet
-
-# Grant DEFAULT_ADMIN_ROLE
-fireblocks-json-rpc --http -- cast send $SBT_PROXY \
-  "grantRole(bytes32,address)" \
-  0x0000000000000000000000000000000000000000000000000000000000000000 \
-  $NEW_ADMIN_ADDRESS \
-  --rpc-url {} \
-  --unlocked \
-  --from $DEPLOYER_ADDRESS
-```
-
-### Grant Pauser Role
-
-To add a pauser to SoulboundToken:
-
-```bash
-# Switch to appropriate environment
-npm run env:switch:mainnet  # or testnet
-
-PAUSER_ROLE=$(cast keccak "PAUSER_ROLE")
-fireblocks-json-rpc --http -- cast send $SBT_PROXY \
-  "grantRole(bytes32,address)" \
-  $PAUSER_ROLE \
-  $PAUSER_ADDRESS \
-  --rpc-url {} \
-  --unlocked \
-  --from $DEPLOYER_ADDRESS
-```
-
-### Transfer Ownership of SBTSale
-
-To transfer ownership (2-step process):
-
-```bash
-# Switch to appropriate environment
-npm run env:switch:mainnet  # or testnet
-
-# Step 1: Initiate transfer
-fireblocks-json-rpc --http -- cast send $SBTSALE_PROXY \
-  "transferOwnership(address)" $NEW_OWNER_ADDRESS \
-  --rpc-url {} \
-  --unlocked \
-  --from $DEPLOYER_ADDRESS
-
-# Step 2: New owner accepts (must be executed by new owner)
-fireblocks-json-rpc --http -- cast send $SBTSALE_PROXY \
-  "acceptOwnership()" \
-  --rpc-url {} \
-  --unlocked \
-  --from $NEW_OWNER_ADDRESS
-```
 
 ## Security Notes
 
