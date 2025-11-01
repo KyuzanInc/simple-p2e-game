@@ -1,49 +1,55 @@
 # SBTSale Upgrade Guide
 
-This document covers how to roll out SBTSale implementation upgrades on the Oasys Testnet and Mainnet. SBTSale is deployed behind a `TransparentUpgradeableProxy`, so upgrades consist of deploying a new implementation contract and instructing the proxy admin to point to it.
+This guide explains how to upgrade the SBTSale implementation contract.
+
+## Overview
+
+SBTSale uses OpenZeppelin's TransparentUpgradeableProxy pattern with three components:
+
+1. **Implementation**: The SBTSale contract logic
+2. **Proxy**: Delegates calls to the implementation
+3. **ProxyAdmin**: Contract that manages proxy upgrades
+
+The ProxyAdmin is automatically deployed when you deploy the proxy. The address you specify as `P2E_ADMIN` becomes the **owner of the ProxyAdmin contract**.
 
 ## Prerequisites
 
-- Foundry toolchain installed (`forge`, `cast`)
-- Environment configured via `.envrc.testnet` or `.envrc.mainnet`
-- Proxy admin private key (testnet) or Fireblocks vault (mainnet) with permission to call `upgradeTo`
-- Updated `.envrc.*` values for:
-  - `$SBTSALE_PROXY`
-  - `$P2E_ADMIN`
-  - Constructor parameters (`$P2E_POAS_MINTER`, `$P2E_LIQUIDITY_POOL`, `$P2E_LP_RECIPIENT`, `$P2E_REVENUE_RECIPIENT`, `$P2E_SMP_BASE_PRICE`, `$P2E_SMP_BURN_RATIO`, `$P2E_SMP_LIQUIDITY_RATIO`)
-- Optional: `$SBTSALE_IMPLEMENTATION` pointing at the current implementation (helps with rollback validation)
+```bash
+# Required environment variables in .envrc.mainnet or .envrc.testnet
+SBTSALE_PROXY            # The proxy address
+SBTSALE_PROXY_ADMIN      # The ProxyAdmin contract address
+P2E_ADMIN                # The ProxyAdmin owner (your address)
 
-## Prepare Environment
+# Constructor parameters (must match original deployment)
+P2E_POAS_MINTER
+P2E_LIQUIDITY_POOL
+P2E_LP_RECIPIENT
+P2E_REVENUE_RECIPIENT
+P2E_SMP_BASE_PRICE
+P2E_SMP_BURN_RATIO
+P2E_SMP_LIQUIDITY_RATIO
+```
 
-1. Switch to the desired network:
-   ```bash
-   npm run env:switch:testnet   # or env:switch:mainnet
-   ```
-2. Verify the expected variables are loaded:
-   ```bash
-   npm run env:status
-   env | grep -E "^(RPC_URL|EXPLORER_API_URL|SBTSALE_|P2E_)"
-   ```
-3. Confirm the proxy admin stored on-chain matches your expectations:
-   ```bash
-   cast admin $SBTSALE_PROXY --rpc-url $RPC_URL
-   ```
-   > If the result differs from `$P2E_ADMIN`, update `.envrc.*` or execute `cast send $SBTSALE_PROXY "changeAdmin(address)" <expected_admin>` (signed by the current admin) before continuing.
-4. Confirm that the deployer credentials are available:
+## Step 1: Get ProxyAdmin Address
 
-   ```bash
-   # Testnet: must print the same address as $P2E_ADMIN
-   cast wallet address --private-key $PRIVATE_KEY
+If you don't have `SBTSALE_PROXY_ADMIN` set, retrieve it:
 
-   # Mainnet: must print the Fireblocks vault account defined in $DEPLOYER_ADDRESS
-   echo $DEPLOYER_ADDRESS
-   ```
+```bash
+ADMIN_SLOT=0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103
+SBTSALE_PROXY_ADMIN=$(cast storage $SBTSALE_PROXY $ADMIN_SLOT --rpc-url $RPC_URL | sed 's/0x000000000000000000000000/0x/')
+echo "ProxyAdmin: $SBTSALE_PROXY_ADMIN"
+```
 
-## Deploy the New Implementation
+Add this to your `.envrc.mainnet` or `.envrc.testnet` and reload:
 
-### Testnet (Private Key Deployment)
+```bash
+export SBTSALE_PROXY_ADMIN="0x..."
+direnv allow
+```
 
-Deploy a fresh SBTSale implementation using the existing constructor parameters:
+## Step 2: Deploy New Implementation
+
+### Testnet
 
 ```bash
 forge create \
@@ -61,17 +67,7 @@ forge create \
     $P2E_SMP_LIQUIDITY_RATIO
 ```
 
-> `forge create` defaults to a dry run; the `--broadcast` flag is required to submit the transaction. If a dry-run warning still appears, ensure no shell profile sets `FOUNDRY_BROADCAST=0` or `FOUNDRY_DRY_RUN=1`.
-
-Record the implementation address printed by `forge create` and update `.envrc.testnet`:
-
-```bash
-export SBTSALE_IMPLEMENTATION="0xNEW_IMPLEMENTATION"
-```
-
-### Mainnet (Fireblocks Deployment)
-
-Deploy via the Fireblocks JSON-RPC bridge. The deployer address must match your Fireblocks vault account (`$DEPLOYER_ADDRESS`):
+### Mainnet (Fireblocks)
 
 ```bash
 FIREBLOCKS_API_KEY=$FIREBLOCKS_API_KEY \
@@ -93,70 +89,74 @@ forge create src/SBTSale.sol:SBTSale \
   --rpc-url {}
 ```
 
-> Fireblocks will stage the transaction for policy approval. Ensure the JSON-RPC server runs with broadcasting enabled and that the vault account has deployment permissions.
-
-After deployment, write the new address to `.envrc.mainnet`:
+Save the deployed address:
 
 ```bash
-export SBTSALE_IMPLEMENTATION="0xNEW_IMPLEMENTATION"
+export SBTSALE_IMPLEMENTATION="0x..."
 ```
 
-Reload the environment (`direnv allow` or `npm run env:switch:*`) so subsequent commands pick up the new value.
+## Step 3: Upgrade the Proxy
 
-## Upgrade the Proxy
+Upgrades are performed through the ProxyAdmin contract using `upgradeAndCall()`.
 
-### Testnet (Private Key Admin)
-
-Ensure `$PRIVATE_KEY` corresponds to `$P2E_ADMIN`. Then execute:
+### Testnet
 
 ```bash
-cast send $SBTSALE_PROXY \
-  "upgradeTo(address)" \
+cast send $SBTSALE_PROXY_ADMIN \
+  "upgradeAndCall(address,address,bytes)" \
+  $SBTSALE_PROXY \
   $SBTSALE_IMPLEMENTATION \
+  "0x" \
   --rpc-url $RPC_URL \
   --from $P2E_ADMIN \
   --private-key $PRIVATE_KEY
 ```
 
-> `cast send` broadcasts immediately. Double-check the target address and arguments before executing.
-
-### Mainnet (Fireblocks Admin)
-
-Use the same Fireblocks credentials and admin address (`$P2E_ADMIN`) to trigger the upgrade:
+### Mainnet (Fireblocks)
 
 ```bash
 FIREBLOCKS_API_KEY=$FIREBLOCKS_API_KEY \
 FIREBLOCKS_API_PRIVATE_KEY_PATH=$FIREBLOCKS_API_PRIVATE_KEY_PATH \
 FIREBLOCKS_CHAIN_ID=$FIREBLOCKS_CHAIN_ID \
 fireblocks-json-rpc --http -- \
-cast send $SBTSALE_PROXY \
-  "upgradeTo(address)" \
+cast send $SBTSALE_PROXY_ADMIN \
+  "upgradeAndCall(address,address,bytes)" \
+  $SBTSALE_PROXY \
   $SBTSALE_IMPLEMENTATION \
+  "0x" \
   --from $P2E_ADMIN \
   --unlocked \
   --rpc-url {} \
   --slow
 ```
 
-> Tip: Add `--gas-price` / `--priority-gas-price` if you need to override Fireblocks defaults.
->
-> The wrapped `cast send` command will broadcast once Fireblocks approves the transaction.
+## Step 4: Verify
 
-## Post-Upgrade Validation
+```bash
+# Check the new implementation address
+IMPLEMENTATION_SLOT=0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc
+cast storage $SBTSALE_PROXY $IMPLEMENTATION_SLOT --rpc-url $RPC_URL
 
-1. Confirm the proxy now points at the new implementation:
-   ```bash
-   IMPLEMENTATION_SLOT=0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc
-   cast storage $SBTSALE_PROXY $IMPLEMENTATION_SLOT --rpc-url $RPC_URL
-   ```
-2. Check ownership and signer state remained intact:
-   ```bash
-   cast call $SBTSALE_PROXY "owner()(address)" --rpc-url $RPC_URL
-   cast call $SBTSALE_PROXY "getSigner()(address)" --rpc-url $RPC_URL
-   ```
-3. (Optional) Re-run verification using `docs/VERIFY_CONTRACT.md`.
-4. Update runbooks or changelogs with the new implementation address and relevant transaction hashes.
+# Verify state is preserved
+cast call $SBTSALE_PROXY "owner()(address)" --rpc-url $RPC_URL
+cast call $SBTSALE_PROXY "getSigner()(address)" --rpc-url $RPC_URL
+```
 
 ## Rollback
 
-If you need to revert, repeat the upgrade command with the previous implementation address (kept in version control or release notes). No additional configuration changes are required, provided the old implementation is still compatible with the current storage layout.
+To revert to a previous implementation:
+
+```bash
+# Set the old implementation address
+OLD_IMPLEMENTATION="0x..."
+
+# Run the upgrade command again with the old address
+cast send $SBTSALE_PROXY_ADMIN \
+  "upgradeAndCall(address,address,bytes)" \
+  $SBTSALE_PROXY \
+  $OLD_IMPLEMENTATION \
+  "0x" \
+  --rpc-url $RPC_URL \
+  --from $P2E_ADMIN \
+  --private-key $PRIVATE_KEY
+```
