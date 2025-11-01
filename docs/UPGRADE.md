@@ -24,7 +24,12 @@ This document covers how to roll out SBTSale implementation upgrades on the Oasy
    npm run env:status
    env | grep -E "^(RPC_URL|EXPLORER_API_URL|SBTSALE_|P2E_)"
    ```
-3. Confirm that the deployer credentials are available:
+3. Confirm the proxy admin stored on-chain matches your expectations:
+   ```bash
+   cast admin $SBTSALE_PROXY --rpc-url $RPC_URL
+   ```
+   > If the result differs from `$P2E_ADMIN`, update `.envrc.*` or execute `cast send $SBTSALE_PROXY "changeAdmin(address)" <expected_admin>` (signed by the current admin) before continuing.
+4. Confirm that the deployer credentials are available:
 
    ```bash
    # Testnet: must print the same address as $P2E_ADMIN
