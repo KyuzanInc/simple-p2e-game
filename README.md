@@ -97,4 +97,6 @@ For detailed instructions:
 
 - **[docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md)** - Complete deployment guide
 - **[docs/SETUP_ROLES.md](./docs/SETUP_ROLES.md)** - Post-deployment role configuration
+- **[docs/UPGRADE.md](./docs/UPGRADE.md)** - Contract upgrade guide
+- **[docs/VERIFY_CONTRACT.md](./docs/VERIFY_CONTRACT.md)** - Contract verification guide
 - **[CLAUDE.md](./CLAUDE.md)** - Development commands and architecture

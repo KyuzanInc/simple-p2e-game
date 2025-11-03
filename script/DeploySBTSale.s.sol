@@ -55,17 +55,22 @@ contract DeploySBTSale is Script {
             smpLiquidityRatio
         );
 
+        // Note: TransparentUpgradeableProxy automatically deploys a new ProxyAdmin contract
+        // The second parameter (admin) becomes the owner of that ProxyAdmin contract
+        // The proxy's admin (stored in ERC1967 admin slot) will be the ProxyAdmin contract address
         proxy = new TransparentUpgradeableProxy(
             address(implementation),
-            admin,
+            admin, // This becomes the owner of the newly deployed ProxyAdmin contract
             abi.encodeWithSelector(SBTSale.initialize.selector, admin)
         );
 
         // print deployment result
         bytes32 ADMIN_SLOT = 0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103;
+        address proxyAdminContract = address(uint160(uint256(vm.load(address(proxy), ADMIN_SLOT))));
         console.log("--------------------------------");
         console.log("SBTSale(implementation):", address(implementation));
-        console.log("ProxyAdmin:", address(uint160(uint256(vm.load(address(proxy), ADMIN_SLOT)))));
+        console.log("ProxyAdmin contract:", proxyAdminContract);
+        console.log("ProxyAdmin owner:", admin);
         console.log("Proxy:", address(proxy));
 
         vm.stopBroadcast();
