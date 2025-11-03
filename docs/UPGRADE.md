@@ -49,22 +49,15 @@ direnv allow
 
 ## Step 2: Deploy New Implementation
 
+**Note:** Use `forge script` (not `forge create`) for deployment, as it properly supports both standard and Fireblocks deployment methods.
+
 ### Testnet
 
 ```bash
-forge create \
-  src/SBTSale.sol:SBTSale \
+forge script script/DeploySBTSaleImplementation.s.sol:DeploySBTSaleImplementation \
   --rpc-url $RPC_URL \
   --broadcast \
-  --private-key $PRIVATE_KEY \
-  --constructor-args \
-    $P2E_POAS_MINTER \
-    $P2E_LIQUIDITY_POOL \
-    $P2E_LP_RECIPIENT \
-    $P2E_REVENUE_RECIPIENT \
-    $P2E_SMP_BASE_PRICE \
-    $P2E_SMP_BURN_RATIO \
-    $P2E_SMP_LIQUIDITY_RATIO
+  --private-key $PRIVATE_KEY
 ```
 
 ### Mainnet (Fireblocks)
@@ -74,18 +67,11 @@ FIREBLOCKS_API_KEY=$FIREBLOCKS_API_KEY \
 FIREBLOCKS_API_PRIVATE_KEY_PATH=$FIREBLOCKS_API_PRIVATE_KEY_PATH \
 FIREBLOCKS_CHAIN_ID=$FIREBLOCKS_CHAIN_ID \
 fireblocks-json-rpc --http -- \
-forge create src/SBTSale.sol:SBTSale \
-  --from $DEPLOYER_ADDRESS \
-  --unlocked \
+forge script script/DeploySBTSaleImplementation.s.sol:DeploySBTSaleImplementation \
+  --sender $DEPLOYER_ADDRESS \
+  --slow \
   --broadcast \
-  --constructor-args \
-    $P2E_POAS_MINTER \
-    $P2E_LIQUIDITY_POOL \
-    $P2E_LP_RECIPIENT \
-    $P2E_REVENUE_RECIPIENT \
-    $P2E_SMP_BASE_PRICE \
-    $P2E_SMP_BURN_RATIO \
-    $P2E_SMP_LIQUIDITY_RATIO \
+  --unlocked \
   --rpc-url {}
 ```
 
@@ -99,16 +85,14 @@ export SBTSALE_IMPLEMENTATION="0x..."
 
 Upgrades are performed through the ProxyAdmin contract using `upgradeAndCall()`.
 
+**Note:** Use `forge script` for upgrades to ensure compatibility with both standard and Fireblocks deployment methods.
+
 ### Testnet
 
 ```bash
-cast send $SBTSALE_PROXY_ADMIN \
-  "upgradeAndCall(address,address,bytes)" \
-  $SBTSALE_PROXY \
-  $SBTSALE_IMPLEMENTATION \
-  "0x" \
+forge script script/UpgradeSBTSale.s.sol:UpgradeSBTSale \
   --rpc-url $RPC_URL \
-  --from $P2E_ADMIN \
+  --broadcast \
   --private-key $PRIVATE_KEY
 ```
 
@@ -119,15 +103,12 @@ FIREBLOCKS_API_KEY=$FIREBLOCKS_API_KEY \
 FIREBLOCKS_API_PRIVATE_KEY_PATH=$FIREBLOCKS_API_PRIVATE_KEY_PATH \
 FIREBLOCKS_CHAIN_ID=$FIREBLOCKS_CHAIN_ID \
 fireblocks-json-rpc --http -- \
-cast send $SBTSALE_PROXY_ADMIN \
-  "upgradeAndCall(address,address,bytes)" \
-  $SBTSALE_PROXY \
-  $SBTSALE_IMPLEMENTATION \
-  "0x" \
-  --from $P2E_ADMIN \
+forge script script/UpgradeSBTSale.s.sol:UpgradeSBTSale \
+  --sender $DEPLOYER_ADDRESS \
+  --slow \
+  --broadcast \
   --unlocked \
-  --rpc-url {} \
-  --slow
+  --rpc-url {}
 ```
 
 ## Step 4: Verify
@@ -144,19 +125,27 @@ cast call $SBTSALE_PROXY "getSigner()(address)" --rpc-url $RPC_URL
 
 ## Rollback
 
-To revert to a previous implementation:
+To revert to a previous implementation, set the old implementation address and run the upgrade script again:
 
 ```bash
 # Set the old implementation address
-OLD_IMPLEMENTATION="0x..."
+export SBTSALE_IMPLEMENTATION="0x..."
 
-# Run the upgrade command again with the old address
-cast send $SBTSALE_PROXY_ADMIN \
-  "upgradeAndCall(address,address,bytes)" \
-  $SBTSALE_PROXY \
-  $OLD_IMPLEMENTATION \
-  "0x" \
+# Testnet
+forge script script/UpgradeSBTSale.s.sol:UpgradeSBTSale \
   --rpc-url $RPC_URL \
-  --from $P2E_ADMIN \
+  --broadcast \
   --private-key $PRIVATE_KEY
+
+# Mainnet (Fireblocks)
+FIREBLOCKS_API_KEY=$FIREBLOCKS_API_KEY \
+FIREBLOCKS_API_PRIVATE_KEY_PATH=$FIREBLOCKS_API_PRIVATE_KEY_PATH \
+FIREBLOCKS_CHAIN_ID=$FIREBLOCKS_CHAIN_ID \
+fireblocks-json-rpc --http -- \
+forge script script/UpgradeSBTSale.s.sol:UpgradeSBTSale \
+  --sender $DEPLOYER_ADDRESS \
+  --slow \
+  --broadcast \
+  --unlocked \
+  --rpc-url {}
 ```
